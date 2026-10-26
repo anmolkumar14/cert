@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Certificate Generator Portal Dashboard: Upload candidate rosters, generate landscape A4 certificates, and dispatch personalized PDFs via automated emails.">
+  <title>Dashboard — Certificate Generator Portal</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="css/styles.css">
+
+  <!-- Pinned CDN Libraries -->
+  <!-- SheetJS (Spreadsheet Parser & Exporter) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- html2canvas (DOM to Canvas Renderer) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- jsPDF (Vector & Raster PDF Engine) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- JSZip (Batch Archive Compressor) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <!-- Canvas Confetti (Celebration Particles) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.2/confetti.browser.min.js"></script>
+</head>
+<body>
+  <!-- Dynamic Background Gradient Blobs -->
+  <div class="blob-container" aria-hidden="true">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
+  <div class="app-container">
+    <!-- Top Navigation Bar -->
+    <header class="navbar" role="banner">
+      <a href="dashboard.html" class="brand-wrapper" aria-label="Dashboard Home">
+        <img src="assets/logo.svg" alt="Nexus Logo" class="brand-logo" width="38" height="38">
+        <div>
+          <span class="brand-title">Nexus Certify</span>
+          <span class="brand-badge">Admin Suite</span>
+        </div>
+      </a>
+
+      <div class="nav-actions">
+        <!-- Theme Toggle -->
+        <button id="themeToggleBtn" class="theme-toggle-btn" aria-label="Toggle Theme" title="Toggle Theme">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </button>
+
+        <!-- User Profile Badge -->
+        <div class="user-profile-badge">
+          <div id="navUserAvatar" class="avatar-circle">A</div>
+          <span id="navUserName" class="user-name">Admin</span>
+        </div>
+
+        <!-- Logout Button -->
+        <button id="logoutBtn" class="btn btn-secondary btn-sm" title="Sign out of portal">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>Logout</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Dashboard Container -->
+    <main class="main-content" role="main">
+      <!-- 3-Step Interactive Stepper -->
+      <nav class="stepper-nav" aria-label="Workflow Steps">
+        <div class="stepper-progress-bg">
+          <div id="stepperProgressFill" class="stepper-progress-fill"></div>
+        </div>
+
+        <!-- Step 1 Button -->
+        <button class="step-item active" data-step="1" id="stepBtn1">
+          <div class="step-circle">1</div>
+          <span class="step-label">Upload Roster</span>
+        </button>
+
+        <!-- Step 2 Button -->
+        <button class="step-item" data-step="2" id="stepBtn2">
+          <div class="step-circle">2</div>
+          <span class="step-label">Preview & Export</span>
+        </button>
+
+        <!-- Step 3 Button -->
+        <button class="step-item" data-step="3" id="stepBtn3">
+          <div class="step-circle">3</div>
+          <span class="step-label">Dispatch Emails</span>
+        </button>
+      </nav>
+
+      <!-- ================================================================== -->
+      <!-- STEP 1: EXCEL UPLOAD & DATA VALIDATION -->
+      <!-- ================================================================== -->
+      <section id="stepContent1" class="step-content active" aria-labelledby="step1Heading">
+        <h2 id="step1Heading" class="hidden">Step 1: Upload Roster</h2>
+
+        <div class="upload-grid">
+          <!-- Drag-and-Drop Area -->
+          <div id="dropzone" class="dropzone-container glass-card glass-card-shine" tabindex="0" role="button" aria-label="Upload candidate spreadsheet">
+            <input type="file" id="fileInput" class="hidden" accept=".xlsx, .xls, .csv">
+            
+            <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+
+            <h3 class="dropzone-title">Drag & Drop Candidate Spreadsheet</h3>
+            <p class="dropzone-sub">Drop your Excel (.xlsx, .xls) or CSV (.csv) file here, or click to browse</p>
+
+            <div class="chip-container">
+              <span class="format-chip">.XLSX</span>
+              <span class="format-chip">.XLS</span>
+              <span class="format-chip">.CSV</span>
+            </div>
+          </div>
+
+          <!-- Upload Actions Bar & Quick Sample Generator -->
+          <div class="upload-actions-bar">
+            <div class="stats-card-group">
+              <div class="mini-stat-card">
+                <div class="stat-icon" style="background: rgba(99, 102, 241, 0.15); color: var(--accent-primary);">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <div>
+                  <div id="statTotalRows" class="stat-value">0</div>
+                  <div class="stat-label">Total Rows</div>
+                </div>
+              </div>
+
+              <div class="mini-stat-card">
+                <div class="stat-icon" style="background: var(--status-success-bg); color: var(--status-success);">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                </div>
+                <div>
+                  <div id="statValidRows" class="stat-value" style="color: var(--status-success);">0</div>
+                  <div class="stat-label">Valid Ready</div>
+                </div>
+              </div>
+
+              <div class="mini-stat-card">
+                <div class="stat-icon" style="background: var(--status-danger-bg); color: var(--status-danger);">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                </div>
+                <div>
+                  <div id="statInvalidRows" class="stat-value" style="color: var(--status-danger);">0</div>
+                  <div class="stat-label">Invalid Rows</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+              <button id="downloadTemplateBtn" class="btn btn-secondary" title="Download sample Excel roster template">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>Download Sample Template</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Parsed Data Table Section (Hidden until file is uploaded) -->
+          <div id="parsedTableSection" class="glass-card hidden" style="padding: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+              <!-- Table Filters -->
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <button id="filterAllBtn" class="btn btn-sm btn-primary">All Records</button>
+                <button id="filterValidBtn" class="btn btn-sm btn-secondary">Valid Only</button>
+                <button id="filterInvalidBtn" class="btn btn-sm btn-secondary">Invalid Only</button>
+              </div>
+
+              <!-- Search Bar & Clear -->
+              <div style="display: flex; gap: 0.75rem; align-items: center;">
+                <input 
+                  type="text" 
+                  id="tableSearchInput" 
+                  class="form-input" 
+                  style="width: 220px; padding: 0.45rem 0.85rem; font-size: 0.85rem;" 
+                  placeholder="Filter by name or email..."
+                >
+                <button id="clearDataBtn" class="btn btn-sm btn-outline-danger" title="Clear all parsed rows">Clear All</button>
+              </div>
+            </div>
+
+            <!-- Table Responsive Wrap -->
+            <div class="table-responsive">
+              <table class="custom-table" aria-label="Parsed Candidates Table">
+                <thead>
+                  <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Candidate Name</th>
+                    <th scope="col">Email Address</th>
+                    <th scope="col">Course / Program</th>
+                    <th scope="col">Date</th>
+                    <th scope="col">Certificate ID</th>
+                    <th scope="col">Validation</th>
+                    <th scope="col" style="text-align: right;">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="candidatesTableBody">
+                  <!-- Injected via ExcelManager -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Next Step Action -->
+            <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem;">
+              <button id="proceedToStep2Btn" class="btn btn-primary" disabled>
+                <span>Proceed to Step 2: Preview &rarr;</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================== -->
+      <!-- STEP 2: CERTIFICATE PREVIEW & PDF/ZIP EXPORT -->
+      <!-- ================================================================== -->
+      <section id="stepContent2" class="step-content" aria-labelledby="step2Heading">
+        <h2 id="step2Heading" class="hidden">Step 2: Certificate Preview & Export</h2>
+
+        <div class="preview-layout">
+          <!-- Left Sidebar: Candidate Selector & Export Actions -->
+          <div class="preview-sidebar glass-card">
+            <div>
+              <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.25rem;">Candidate Roster</h3>
+              <p id="previewCandidateCount" style="font-size: 0.8rem; color: var(--text-muted);">0 Candidates</p>
+            </div>
+
+            <!-- Candidate selector list -->
+            <div id="previewCandidateList" class="candidate-selector-list">
+              <!-- Injected by CertificateManager -->
+            </div>
+
+            <hr style="border: none; border-top: 1px solid var(--border-glass);">
+
+            <!-- Export Buttons -->
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+              <button id="downloadSinglePdfBtn" class="btn btn-primary" style="width: 100%;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>Download Current PDF</span>
+              </button>
+
+              <button id="downloadAllZipBtn" class="btn btn-secondary" style="width: 100%;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+                <span>Download All as ZIP</span>
+              </button>
+            </div>
+
+            <hr style="border: none; border-top: 1px solid var(--border-glass);">
+
+            <!-- Navigation Buttons -->
+            <div style="display: flex; justify-content: space-between; gap: 0.5rem;">
+              <button id="backToStep1Btn" class="btn btn-secondary btn-sm">&larr; Back</button>
+              <button id="proceedToStep3Btn" class="btn btn-primary btn-sm">Dispatch Emails &rarr;</button>
+            </div>
+          </div>
+
+          <!-- Right Stage: Live Landscape A4 Certificate Preview -->
+          <div class="preview-stage-container">
+            <div class="certificate-frame-wrap">
+              <!-- Printable Certificate Canvas (Standard A4 Landscape) -->
+              <div id="certificateCanvas" class="certificate-canvas">
+                <!-- Ornate Gold Borders -->
+                <div class="cert-outer-border"></div>
+                <div class="cert-inner-border"></div>
+
+                <!-- Corner Flourishes -->
+                <div class="cert-corner cert-corner-tl"></div>
+                <div class="cert-corner cert-corner-tr"></div>
+                <div class="cert-corner cert-corner-bl"></div>
+                <div class="cert-corner cert-corner-br"></div>
+
+                <!-- Watermark Logo -->
+                <img src="assets/logo.svg" alt="" class="cert-watermark" aria-hidden="true">
+
+                <!-- Header / Org Branding -->
+                <div class="cert-header">
+                  <img src="assets/logo.svg" alt="Organization Logo" class="cert-logo-img">
+                  <div id="certOrgName" class="cert-org-name">Nexus Institute of Technology</div>
+                  <div id="certOrgTagline" class="cert-org-tagline">Official Credential of Merit & Excellence</div>
+
+                  <div class="cert-title-badge">
+                    <span class="cert-title-text">Certificate of Achievement</span>
+                  </div>
+
+                  <div class="cert-subtitle">This is proudly presented to</div>
+                </div>
+
+                <!-- Recipient Calligraphy Name -->
+                <div class="cert-recipient-block">
+                  <div id="certRecipientName" class="cert-recipient-name">Candidate Name</div>
+                  <div class="cert-divider-line"></div>
+                  <p class="cert-body-text">
+                    <span id="certBodyDescription">For successfully fulfilling all curriculum requirements, demonstrating outstanding mastery of modern technologies, and completing capstone projects with academic distinction in</span>
+                    <strong id="certCourseName" class="cert-course-highlight">Advanced Full-Stack Engineering & Cloud Architecture</strong>
+                  </p>
+                </div>
+
+                <!-- Footer Signatures & Gold Seal -->
+                <div class="cert-footer">
+                  <!-- Signer 1 -->
+                  <div class="cert-sig-block">
+                    <div id="certSig1Sign" class="cert-sig-handwriting">Elena Rostova</div>
+                    <div class="cert-sig-line"></div>
+                    <div id="certSig1Name" class="cert-sig-name">Dr. Elena Rostova</div>
+                    <div id="certSig1Title" class="cert-sig-title">Dean of Engineering</div>
+                  </div>
+
+                  <!-- Central Gold Medallion Seal -->
+                  <div class="cert-seal">
+                    <div class="cert-ribbon-left"></div>
+                    <div class="cert-ribbon-right"></div>
+                    <span class="cert-seal-star">&#9733;</span>
+                    <span class="cert-seal-text">VERIFIED</span>
+                    <span class="cert-seal-text" style="font-size: 0.4rem;">EXCELLENCE</span>
+                  </div>
+
+                  <!-- Signer 2 -->
+                  <div class="cert-sig-block">
+                    <div id="certSig2Sign" class="cert-sig-handwriting">Marcus Sterling</div>
+                    <div class="cert-sig-line"></div>
+                    <div id="certSig2Name" class="cert-sig-name">Marcus Sterling</div>
+                    <div id="certSig2Title" class="cert-sig-title">Board Chairperson</div>
+                  </div>
+                </div>
+
+                <!-- Metadata bottom strip -->
+                <div class="cert-meta-bar">
+                  <span>Issued: <strong id="certIssueDate">October 26, 2026</strong></span>
+                  <span>Credential ID: <strong id="certCredentialId" style="font-family: monospace;">NX-2026-0001</strong></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================== -->
+      <!-- STEP 3: DISPATCH EMAILS & REAL-TIME QUEUE -->
+      <!-- ================================================================== -->
+      <section id="stepContent3" class="step-content" aria-labelledby="step3Heading">
+        <h2 id="step3Heading" class="hidden">Step 3: Dispatch Emails</h2>
+
+        <div class="dispatch-grid">
+          <!-- Gmail Quota Notice Banner -->
+          <div class="quota-banner glass-card">
+            <div class="quota-info-text">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-cyan);">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+              </svg>
+              <div>
+                <strong>Google Mail Daily Quota:</strong>
+                <span style="color: var(--text-secondary); font-size: 0.85rem; margin-left: 4px;">
+                  Standard consumer Gmail accounts are limited to ~100 emails/24h. Google Workspace accounts support up to 1,500/day.
+                </span>
+              </div>
+            </div>
+
+            <div id="gmailQuotaDisplay">
+              <span class="quota-badge">Daily Quota Active</span>
+            </div>
+          </div>
+
+          <!-- Progress Section -->
+          <div class="progress-section glass-card">
+            <div class="progress-header">
+              <div>
+                <h3 style="font-size: 1.15rem; font-weight: 700;">Delivery Dispatch Progress</h3>
+                <p id="dispatchProgressCount" style="font-size: 0.82rem; color: var(--text-muted);">0 of 0 processed</p>
+              </div>
+              <div id="dispatchProgressPercent" style="font-size: 1.5rem; font-weight: 800; color: var(--accent-primary);">0%</div>
+            </div>
+
+            <!-- Animated Progress Bar -->
+            <div class="progress-track">
+              <div id="dispatchProgressFill" class="progress-bar-fill"></div>
+            </div>
+
+            <!-- Controls -->
+            <div class="dispatch-controls">
+              <button id="sendAllBtn" class="btn btn-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                <span>Send All Certificates</span>
+              </button>
+
+              <button id="retryFailedBtn" class="btn btn-secondary" style="display: none;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                <span>Retry Failed Only</span>
+              </button>
+
+              <button id="stopSendingBtn" class="btn btn-outline-danger hidden">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><rect x="9" y="9" width="6" height="6"/></svg>
+                <span>Pause Dispatch</span>
+              </button>
+
+              <button id="exportReportBtn" class="btn btn-secondary" style="margin-left: auto;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>Export Audit Report (.xlsx)</span>
+              </button>
+
+              <button id="backToStep2Btn" class="btn btn-secondary btn-sm">&larr; Back to Preview</button>
+            </div>
+          </div>
+
+          <!-- Live Sending Status Table -->
+          <div class="glass-card" style="padding: 1.5rem;">
+            <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem;">Candidate Dispatch Queue</h3>
+            <div class="table-responsive">
+              <table class="custom-table" aria-label="Dispatch Queue Table">
+                <thead>
+                  <tr>
+                    <th scope="col">Candidate</th>
+                    <th scope="col">Email Address</th>
+                    <th scope="col">Certificate ID</th>
+                    <th scope="col">Delivery Status</th>
+                    <th scope="col">Server Log / Result</th>
+                  </tr>
+                </thead>
+                <tbody id="dispatchTableBody">
+                  <!-- Injected via MailerManager -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Final Summary Card (Hidden until finished) -->
+          <div id="dispatchSummaryCard" class="summary-results-card glass-card hidden">
+            <h3 style="font-size: 1.4rem; font-weight: 700;">Delivery Summary</h3>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">The certificate batch dispatch has completed.</p>
+
+            <div class="summary-counts">
+              <div class="summary-count-box">
+                <div id="summaryCountTotal" class="summary-num">0</div>
+                <div class="summary-label">Total Candidates</div>
+              </div>
+              <div class="summary-count-box">
+                <div id="summaryCountSent" class="summary-num" style="color: var(--status-success);">0</div>
+                <div class="summary-label">Sent Successfully</div>
+              </div>
+              <div class="summary-count-box">
+                <div id="summaryCountFailed" class="summary-num" style="color: var(--status-danger);">0</div>
+                <div class="summary-label">Failed Deliveries</div>
+              </div>
+            </div>
+
+            <button onclick="MailerManager.exportResultsReport()" class="btn btn-primary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Download Excel Audit Report (.xlsx)</span>
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Global Toast Container -->
+    <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+  </div>
+
+  <!-- Application Modules -->
+  <script src="js/config.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/excel.js"></script>
+  <script src="js/certificate.js"></script>
+  <script src="js/mailer.js"></script>
+
+  <!-- App Bootstrap Initialization -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      // 1. Guard route: redirect if not logged in
+      Auth.guardRoute("dashboard");
+
+      // 2. Initialize UI Navigation & Stepper
+      UI.initStepper();
+
+      // 3. Initialize Step Controllers
+      ExcelManager.init();
+      CertificateManager.init();
+      MailerManager.init();
+
+      // Expose navigation validator
+      window.CERT_APP = {
+        canNavigateToStep: (step) => {
+          if (step === 2) return ExcelManager.getValidRows().length > 0;
+          if (step === 3) return ExcelManager.getValidRows().length > 0;
+          return true;
+        }
+      };
+    });
+  </script>
+</body>
+</html>
