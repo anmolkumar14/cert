@@ -3,8 +3,9 @@
  * Certificate Generator Portal - Dispatch & Mailer Queue (mailer.js)
  * ============================================================================
  * Handles:
+ * - Admin Approval Gated Sending: Only emails approved by the admin are sent!
  * - Rate-limited sequential email sending via Google Apps Script Web App
- * - Live per-row status tracking (Pending, Sending, Sent, Failed)
+ * - Live per-row status tracking (Pending, Sending, Sent, Failed, Blocked)
  * - Dynamic progress bar and real-time status updates
  * - Intelligent retry queue for failed deliveries
  * - Post-dispatch summary metrics & Excel (.xlsx) audit report export
@@ -17,6 +18,7 @@ const MailerManager = (function() {
   let abortRequested = false;
   let dispatchStats = {
     total: 0,
+    approved: 0,
     sent: 0,
     failed: 0,
     skipped: 0
@@ -116,7 +118,7 @@ const MailerManager = (function() {
   }
 
   /**
-   * Render dispatch status table
+   * Render dispatch status table with Admin Approval column
    */
   function renderDispatchTable() {
     const tbody = document.getElementById("dispatchTableBody");
@@ -129,13 +131,22 @@ const MailerManager = (function() {
       const tr = document.createElement("tr");
       tr.id = `dispatch_row_${row.id}`;
 
+      // Approval badge
+      let approvalBadgeHtml = "";
+      if (row.adminApproved) {
+        approvalBadgeHtml = `<span class="badge badge-sent"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Approved</span>`;
+      } else {
+        approvalBadgeHtml = `<span class="badge badge-duplicate" title="Preview and approve in Step 2 to allow emailing"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Awaiting Admin Validation</span>`;
+      }
+
       tr.innerHTML = `
         <td><strong>${escapeHtml(row.name)}</strong></td>
         <td><span style="font-family: monospace; font-size: 0.85rem;">${escapeHtml(row.email)}</span></td>
         <td><span class="font-mono text-cyan" style="font-size: 0.82rem;">${escapeHtml(row.certId)}</span></td>
-        <td class="status-cell">${getStatusBadgeHtml(row.dispatchStatus)}</td>
+        <td class="approval-cell">${approvalBadgeHtml}</td>
+        <td class="status-cell">${getStatusBadgeHtml(row)}</td>
         <td class="message-cell" style="font-size: 0.8rem; color: var(--text-muted); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-          ${escapeHtml(row.dispatchMessage || "Ready")}
+          ${escapeHtml(row.dispatchMessage || (row.adminApproved ? "Validated & Ready to send" : "Blocked: Requires Admin Approval in Step 2"))}
         </td>
       `;
 
@@ -144,10 +155,14 @@ const MailerManager = (function() {
   }
 
   /**
-   * Helper for status badges
+   * Helper for delivery status badges
    */
-  function getStatusBadgeHtml(status) {
-    switch (status) {
+  function getStatusBadgeHtml(row) {
+    if (!row.adminApproved && row.dispatchStatus === "pending") {
+      return `<span class="badge badge-duplicate" style="opacity: 0.85;">Blocked</span>`;
+    }
+
+    switch (row.dispatchStatus) {
       case "sent":
         return `<span class="badge badge-sent"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Sent</span>`;
       case "sending":
@@ -155,7 +170,7 @@ const MailerManager = (function() {
       case "failed":
         return `<span class="badge badge-failed"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Failed</span>`;
       default:
-        return `<span class="badge badge-pending">Pending</span>`;
+        return `<span class="badge badge-pending">Ready</span>`;
     }
   }
 
@@ -169,7 +184,7 @@ const MailerManager = (function() {
     const statusCell = tr.querySelector(".status-cell");
     const messageCell = tr.querySelector(".message-cell");
 
-    if (statusCell) statusCell.innerHTML = getStatusBadgeHtml(row.dispatchStatus);
+    if (statusCell) statusCell.innerHTML = getStatusBadgeHtml(row);
     if (messageCell) {
       messageCell.textContent = row.dispatchMessage || "";
       if (row.dispatchStatus === "failed") {
@@ -186,14 +201,21 @@ const MailerManager = (function() {
    */
   function updateProgressUI() {
     const validRows = ExcelManager.getValidRows();
-    const total = validRows.length;
-    const sent = validRows.filter(r => r.dispatchStatus === "sent").length;
-    const failed = validRows.filter(r => r.dispatchStatus === "failed").length;
-    const pending = validRows.filter(r => r.dispatchStatus === "pending" || r.dispatchStatus === "sending").length;
+    const approvedRows = ExcelManager.getApprovedRows();
+    const totalApproved = approvedRows.length;
 
-    dispatchStats = { total, sent, failed, skipped: 0 };
+    const sent = approvedRows.filter(r => r.dispatchStatus === "sent").length;
+    const failed = approvedRows.filter(r => r.dispatchStatus === "failed").length;
 
-    const percent = total > 0 ? Math.round(((sent + failed) / total) * 100) : 0;
+    dispatchStats = {
+      total: validRows.length,
+      approved: totalApproved,
+      sent: sent,
+      failed: failed,
+      skipped: validRows.length - totalApproved
+    };
+
+    const percent = totalApproved > 0 ? Math.round(((sent + failed) / totalApproved) * 100) : 0;
 
     const fillEl = document.getElementById("dispatchProgressFill");
     const textEl = document.getElementById("dispatchProgressPercent");
@@ -201,7 +223,7 @@ const MailerManager = (function() {
 
     if (fillEl) fillEl.style.width = `${percent}%`;
     if (textEl) textEl.textContent = `${percent}%`;
-    if (countEl) countEl.textContent = `${sent + failed} of ${total} processed`;
+    if (countEl) countEl.textContent = `${sent + failed} of ${totalApproved} approved emails dispatched`;
 
     // Summary counters
     const sumSent = document.getElementById("summaryCountSent");
@@ -210,7 +232,17 @@ const MailerManager = (function() {
 
     if (sumSent) sumSent.textContent = sent;
     if (sumFailed) sumFailed.textContent = failed;
-    if (sumTotal) sumTotal.textContent = total;
+    if (sumTotal) sumTotal.textContent = totalApproved;
+
+    // Send button state & label
+    const sendAllBtn = document.getElementById("sendAllBtn");
+    if (sendAllBtn) {
+      sendAllBtn.disabled = totalApproved === 0 || isSending;
+      sendAllBtn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        <span>Send ${totalApproved > 0 ? totalApproved : 0} Approved Certificates</span>
+      `;
+    }
 
     // Retry button state
     const retryBtn = document.getElementById("retryFailedBtn");
@@ -229,25 +261,30 @@ const MailerManager = (function() {
   }
 
   /**
-   * Core dispatch runner: sends emails one by one with rate-limiting delay
+   * Core dispatch runner: sends ONLY admin-approved candidates
    */
   async function startDispatch(onlyFailed = false) {
     if (isSending) return;
 
-    const validRows = ExcelManager.getValidRows();
+    const approvedRows = ExcelManager.getApprovedRows();
+
+    if (approvedRows.length === 0) {
+      UI.showToast("Admin Validation Required", "None of the candidates have been approved by the admin. Please return to Step 2 (Preview) and click 'Validate & Approve' first.", "warning", 6000);
+      return;
+    }
+
     const queue = onlyFailed
-      ? validRows.filter(r => r.dispatchStatus === "failed")
-      : validRows.filter(r => r.dispatchStatus !== "sent");
+      ? approvedRows.filter(r => r.dispatchStatus === "failed")
+      : approvedRows.filter(r => r.dispatchStatus !== "sent");
 
     if (queue.length === 0) {
-      UI.showToast("Nothing to Send", onlyFailed ? "There are no failed emails to retry." : "All valid emails have already been sent.", "info");
+      UI.showToast("Nothing to Send", onlyFailed ? "There are no failed emails to retry." : "All approved certificates have already been sent.", "info");
       return;
     }
 
     isSending = true;
     abortRequested = false;
 
-    // Toggle UI buttons
     const sendAllBtn = document.getElementById("sendAllBtn");
     const retryBtn = document.getElementById("retryFailedBtn");
     const stopBtn = document.getElementById("stopSendingBtn");
@@ -256,7 +293,7 @@ const MailerManager = (function() {
     if (retryBtn) retryBtn.disabled = true;
     if (stopBtn) stopBtn.classList.remove("hidden");
 
-    UI.showToast("Dispatch Started", `Queued ${queue.length} certificate emails...`, "info");
+    UI.showToast("Dispatch Started", `Sending ${queue.length} validated certificate emails...`, "info");
 
     const user = Auth.getUser();
     const isDemo = user && user.isDemo;
@@ -268,26 +305,24 @@ const MailerManager = (function() {
 
       const row = queue[i];
       row.dispatchStatus = "sending";
-      row.dispatchMessage = "Rendering certificate & dispatching...";
+      row.dispatchMessage = "Rendering IIM Indore certificate & delivering...";
       updateRowStatusInDOM(row);
 
       try {
         // Step 1: Render certificate to Base64 PDF
         const pdfBase64 = await CertificateManager.generatePdfBase64(row);
 
-        // Step 2: Send Email via Google Apps Script or Simulate in Demo Mode
+        // Step 2: Send Email via Google Apps Script or Demo Simulation
         if (isDemo) {
-          // Simulate realistic network delay
           await new Promise(resolve => setTimeout(resolve, 850));
           row.dispatchStatus = "sent";
-          row.dispatchMessage = "Sent successfully (Demo Mode simulated delivery)";
+          row.dispatchMessage = "Dispatched (Demo mode simulated delivery)";
           row.sentAt = new Date().toISOString();
         } else {
-          // Real backend dispatch
           const result = await sendEmailViaBackend(row, pdfBase64);
           if (result.success) {
             row.dispatchStatus = "sent";
-            row.dispatchMessage = "Dispatched via Gmail API";
+            row.dispatchMessage = "Dispatched successfully via Gmail API";
             row.sentAt = new Date().toISOString();
           } else {
             row.dispatchStatus = "failed";
@@ -297,13 +332,13 @@ const MailerManager = (function() {
       } catch (err) {
         console.error("Email send error:", err);
         row.dispatchStatus = "failed";
-        row.dispatchMessage = err.message || "Failed to generate or send PDF";
+        row.dispatchMessage = err.message || "Failed to generate or deliver PDF";
       }
 
       updateRowStatusInDOM(row);
       updateProgressUI();
 
-      // Rate limit delay between emails (except after last)
+      // Rate limit delay between emails
       if (i < queue.length - 1 && !abortRequested) {
         await new Promise(resolve => setTimeout(resolve, CONFIG.DISPATCH.delayBetweenEmailsMs));
       }
@@ -320,10 +355,10 @@ const MailerManager = (function() {
     const finalFailed = queue.filter(r => r.dispatchStatus === "failed").length;
     if (!abortRequested) {
       if (finalFailed === 0) {
-        UI.showToast("All Emails Sent!", `Successfully dispatched all ${queue.length} certificates.`, "success");
+        UI.showToast("Batch Delivered!", `Successfully dispatched all ${queue.length} validated certificates.`, "success");
         UI.celebrateConfetti();
       } else {
-        UI.showToast("Dispatch Finished", `Completed with ${finalFailed} failed delivery attempt(s). Click "Retry Failed" to re-send.`, "warning");
+        UI.showToast("Dispatch Completed", `Completed with ${finalFailed} failed delivery attempt(s).`, "warning");
       }
     }
   }
@@ -336,18 +371,18 @@ const MailerManager = (function() {
       throw new Error("No backend URL configured in js/config.js. Cannot send real emails.");
     }
 
-    // Build personalized HTML email body
     const personalizedHtml = CONFIG.EMAIL.bodyTemplate
       .replace(/{{name}}/g, escapeHtml(row.name))
-      .replace(/{{course}}/g, escapeHtml(row.course))
+      .replace(/{{programme}}/g, escapeHtml(row.programme))
+      .replace(/{{duration}}/g, escapeHtml(row.duration))
+      .replace(/{{period}}/g, escapeHtml(row.period))
       .replace(/{{certId}}/g, escapeHtml(row.certId))
-      .replace(/{{orgName}}/g, escapeHtml(CONFIG.ORGANIZATION.name))
       .replace(/{{website}}/g, escapeHtml(CONFIG.ORGANIZATION.website))
       .replace(/{{supportEmail}}/g, escapeHtml(CONFIG.ORGANIZATION.supportEmail));
 
     const personalizedSubject = CONFIG.EMAIL.subject
       .replace(/{{name}}/g, row.name)
-      .replace(/{{course}}/g, row.course)
+      .replace(/{{programme}}/g, row.programme)
       .replace(/{{certId}}/g, row.certId);
 
     const payload = {
@@ -355,7 +390,7 @@ const MailerManager = (function() {
       token: Auth.getToken(),
       recipientEmail: row.email,
       recipientName: row.name,
-      courseName: row.course,
+      courseName: row.programme,
       certId: row.certId,
       subject: personalizedSubject,
       htmlBody: personalizedHtml,
@@ -375,8 +410,7 @@ const MailerManager = (function() {
       throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
     }
 
-    const data = await response.json();
-    return data;
+    return await response.json();
   }
 
   /**
@@ -384,43 +418,55 @@ const MailerManager = (function() {
    */
   function exportResultsReport() {
     try {
-      const validRows = ExcelManager.getValidRows();
-      if (validRows.length === 0) {
+      const allRows = ExcelManager.getAllRows();
+      if (allRows.length === 0) {
         UI.showToast("No Data", "No records available for export.", "warning");
         return;
       }
 
-      const reportData = validRows.map(r => ({
-        "Candidate Name": r.name,
+      const reportData = allRows.map(r => ({
+        "Participant Name": r.name,
+        "Participant Name (Hindi)": r.nameHindi || "N/A",
         "Email Address": r.email,
-        "Course / Program": r.course,
-        "Issue Date": r.date,
+        "Email Structure Check": r.emailValidation ? r.emailValidation.reason : "N/A",
+        "Admin Approved": r.adminApproved ? "YES" : "NO",
+        "Approved At": r.approvedAt || "N/A",
+        "Approved By": r.approvedBy || "N/A",
+        "Programme Name": r.programme,
+        "Duration": r.duration,
+        "Period": r.period,
         "Certificate ID": r.certId,
         "Delivery Status": r.dispatchStatus ? r.dispatchStatus.toUpperCase() : "PENDING",
-        "System Log": r.dispatchMessage || "N/A",
-        "Dispatched At": r.sentAt || "N/A"
+        "Dispatched At": r.sentAt || "N/A",
+        "Server Log": r.dispatchMessage || "N/A"
       }));
 
       const worksheet = XLSX.utils.json_to_sheet(reportData);
 
       worksheet["!cols"] = [
         { wch: 22 }, // Name
+        { wch: 22 }, // Name Hindi
         { wch: 28 }, // Email
-        { wch: 40 }, // Course
-        { wch: 18 }, // Date
+        { wch: 30 }, // Structure Check
+        { wch: 15 }, // Approved
+        { wch: 22 }, // Approved At
+        { wch: 14 }, // Approved By
+        { wch: 40 }, // Programme
+        { wch: 14 }, // Duration
+        { wch: 24 }, // Period
         { wch: 18 }, // Cert ID
         { wch: 16 }, // Status
-        { wch: 38 }, // Log
-        { wch: 25 }  // Sent At
+        { wch: 22 }, // Sent At
+        { wch: 35 }  // Log
       ];
 
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Dispatch_Report");
+      XLSX.utils.book_append_sheet(workbook, worksheet, "IIM_Indore_Dispatch_Report");
 
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
       XLSX.writeFile(workbook, `Certificate_Dispatch_Report_${timestamp}.xlsx`);
 
-      UI.showToast("Report Exported", "Excel report downloaded successfully.", "success");
+      UI.showToast("Report Exported", "Excel audit report downloaded successfully.", "success");
     } catch (err) {
       console.error("Export report error:", err);
       UI.showToast("Export Failed", "Could not export report: " + err.message, "error");

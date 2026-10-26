@@ -1,13 +1,14 @@
 /**
  * ============================================================================
- * Certificate Generator Portal - Certificate Renderer & PDF Generator (certificate.js)
+ * Certificate Generator Portal - IIM Indore Bilingual Certificate Renderer (certificate.js)
  * ============================================================================
  * Handles:
- * - Live landscape A4 Certificate rendering in HTML/CSS
- * - Dynamic recipient, course, date, ID and signature binding
+ * - Bilingual Hindi & English official IIM Indore certificate rendering
+ * - Dynamic QR Code generation client-side (via QRCode.js)
+ * - Candidate photo rendering (with avatar fallback)
+ * - Admin Preview & Validation Workflow (Approving individual or all certificates)
  * - High-resolution PDF rendering via html2canvas & jsPDF (< 1 MB per PDF)
- * - Single PDF download
- * - Batch ZIP export using JSZip
+ * - Single PDF download & Batch ZIP export
  * - Base64 PDF generation for Apps Script email delivery
  */
 
@@ -15,6 +16,8 @@ const CertificateManager = (function() {
   // State
   let activeCandidate = null;
   let isGeneratingZip = false;
+  let qrCodeInstance = null;
+  let showWatermark = true;
 
   /**
    * Initialize Step 2 bindings
@@ -24,6 +27,10 @@ const CertificateManager = (function() {
     const downloadAllZipBtn = document.getElementById("downloadAllZipBtn");
     const backToStep1Btn = document.getElementById("backToStep1Btn");
     const proceedToStep3Btn = document.getElementById("proceedToStep3Btn");
+    const approveCurrentBtn = document.getElementById("approveCurrentCandidateBtn");
+    const revokeApprovalBtn = document.getElementById("revokeApprovalBtn");
+    const approveAllBtn = document.getElementById("approveAllCandidatesBtn");
+    const toggleWatermarkBtn = document.getElementById("toggleWatermarkBtn");
 
     if (downloadSinglePdfBtn) {
       downloadSinglePdfBtn.addEventListener("click", () => {
@@ -44,7 +51,58 @@ const CertificateManager = (function() {
     }
 
     if (proceedToStep3Btn) {
-      proceedToStep3Btn.addEventListener("click", () => UI.goToStep(3));
+      proceedToStep3Btn.addEventListener("click", () => {
+        const approvedCount = ExcelManager.getApprovedRows().length;
+        if (approvedCount === 0) {
+          UI.showToast("Admin Validation Required", "Please validate & approve at least one candidate preview before proceeding to email dispatch.", "warning");
+          return;
+        }
+        UI.goToStep(3);
+      });
+    }
+
+    // Admin Approval Handlers
+    if (approveCurrentBtn) {
+      approveCurrentBtn.addEventListener("click", () => {
+        if (!activeCandidate) return;
+        ExcelManager.setAdminApproval(activeCandidate.id, true);
+        updateApprovalStateUI(activeCandidate);
+        renderCandidateList(ExcelManager.getValidRows());
+        UI.showToast("Candidate Approved", `Certificate for ${activeCandidate.name} has been validated for email delivery.`, "success");
+      });
+    }
+
+    if (revokeApprovalBtn) {
+      revokeApprovalBtn.addEventListener("click", () => {
+        if (!activeCandidate) return;
+        ExcelManager.setAdminApproval(activeCandidate.id, false);
+        updateApprovalStateUI(activeCandidate);
+        renderCandidateList(ExcelManager.getValidRows());
+        UI.showToast("Approval Revoked", `Approval removed for ${activeCandidate.name}.`, "info");
+      });
+    }
+
+    if (approveAllBtn) {
+      approveAllBtn.addEventListener("click", () => {
+        const validRows = ExcelManager.getValidRows();
+        if (validRows.length === 0) return;
+        ExcelManager.setAllAdminApproval(true);
+        if (activeCandidate) updateApprovalStateUI(activeCandidate);
+        renderCandidateList(validRows);
+        UI.showToast("All Approved", `Validated all ${validRows.length} candidates for dispatch.`, "success");
+        UI.celebrateConfetti();
+      });
+    }
+
+    if (toggleWatermarkBtn) {
+      toggleWatermarkBtn.addEventListener("click", () => {
+        showWatermark = !showWatermark;
+        const watermarkEl = document.getElementById("certSampleWatermark");
+        if (watermarkEl) {
+          watermarkEl.style.display = showWatermark ? "block" : "none";
+        }
+        toggleWatermarkBtn.textContent = showWatermark ? "Hide Watermark" : "Show Watermark";
+      });
     }
   }
 
@@ -54,111 +112,203 @@ const CertificateManager = (function() {
   function onEnterStep() {
     const validRows = ExcelManager.getValidRows();
     if (validRows.length === 0) {
-      UI.showToast("No Data", "Please upload valid candidate records first.", "warning");
+      UI.showToast("No Valid Records", "Please upload valid candidate records first.", "warning");
       UI.goToStep(1);
       return;
     }
 
-    // Set first candidate as default active candidate if none selected
     if (!activeCandidate || !validRows.some(r => r.id === activeCandidate.id)) {
       activeCandidate = validRows[0];
     }
 
     renderCandidateList(validRows);
     updateCertificatePreview(activeCandidate);
+    updateApprovalStateUI(activeCandidate);
+    updateApprovalCount();
   }
 
   /**
-   * Populate sidebar list of candidates
+   * Populate sidebar candidate roster with validation status
    */
   function renderCandidateList(candidates) {
     const listContainer = document.getElementById("previewCandidateList");
-    const countBadge = document.getElementById("previewCandidateCount");
     if (!listContainer) return;
-
-    if (countBadge) {
-      countBadge.textContent = `${candidates.length} Candidate${candidates.length === 1 ? "" : "s"}`;
-    }
 
     listContainer.innerHTML = "";
 
-    candidates.forEach((cand, idx) => {
+    candidates.forEach((cand) => {
       const item = document.createElement("div");
       item.className = "candidate-select-item" + (activeCandidate && activeCandidate.id === cand.id ? " selected" : "");
+
+      const isApproved = cand.adminApproved === true;
+      const approvalIcon = isApproved
+        ? `<span style="color: #10b981; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Approved</span>`
+        : `<span style="color: #f59e0b; font-size: 0.72rem; font-weight: 600;">Pending</span>`;
+
       item.innerHTML = `
-        <div style="overflow: hidden;">
-          <div style="font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(cand.name)}</div>
-          <div style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace;">${escapeHtml(cand.certId)}</div>
+        <div style="overflow: hidden; max-width: 190px;">
+          <div style="font-weight: 600; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(cand.name)}</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted); font-family: monospace;">${escapeHtml(cand.certId)}</div>
         </div>
-        <span style="font-size: 0.75rem; color: var(--accent-cyan); font-weight: 500;">Preview &rarr;</span>
+        <div>
+          ${approvalIcon}
+        </div>
       `;
 
       item.addEventListener("click", () => {
         activeCandidate = cand;
-        // Update selection styles
         listContainer.querySelectorAll(".candidate-select-item").forEach(el => el.classList.remove("selected"));
         item.classList.add("selected");
         updateCertificatePreview(cand);
+        updateApprovalStateUI(cand);
       });
 
       listContainer.appendChild(item);
     });
+
+    updateApprovalCount();
   }
 
   /**
-   * Update the live DOM certificate template with selected candidate data
+   * Update admin approval status badge and action buttons for the current candidate
+   */
+  function updateApprovalStateUI(candidate) {
+    if (!candidate) return;
+
+    const badgeContainer = document.getElementById("currentCandidateApprovalBadge");
+    const approveBtn = document.getElementById("approveCurrentCandidateBtn");
+    const revokeBtn = document.getElementById("revokeApprovalBtn");
+    const candidateNameLabel = document.getElementById("approvalCandidateName");
+
+    if (candidateNameLabel) {
+      candidateNameLabel.textContent = candidate.name;
+    }
+
+    const isApproved = candidate.adminApproved === true;
+
+    if (badgeContainer) {
+      badgeContainer.innerHTML = isApproved
+        ? `<span class="approval-badge-approved"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Validated & Approved by Admin</span>`
+        : `<span class="approval-badge-pending"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Awaiting Admin Validation</span>`;
+    }
+
+    if (approveBtn) {
+      approveBtn.style.display = isApproved ? "none" : "inline-flex";
+    }
+    if (revokeBtn) {
+      revokeBtn.style.display = isApproved ? "inline-flex" : "none";
+    }
+
+    // Step 3 Proceed button status
+    const proceedToStep3Btn = document.getElementById("proceedToStep3Btn");
+    const approvedCount = ExcelManager.getApprovedRows().length;
+    if (proceedToStep3Btn) {
+      proceedToStep3Btn.textContent = `Dispatch Emails (${approvedCount} Approved) \u2192`;
+    }
+  }
+
+  /**
+   * Update top summary counts in sidebar
+   */
+  function updateApprovalCount() {
+    const validCount = ExcelManager.getValidRows().length;
+    const approvedCount = ExcelManager.getApprovedRows().length;
+    const countBadge = document.getElementById("previewCandidateCount");
+
+    if (countBadge) {
+      countBadge.innerHTML = `<strong>${approvedCount}</strong> of <strong>${validCount}</strong> Approved`;
+    }
+  }
+
+  /**
+   * Update DOM certificate template with candidate data
    */
   function updateCertificatePreview(candidate) {
     if (!candidate) return;
 
-    const nameEl = document.getElementById("certRecipientName");
-    const courseEl = document.getElementById("certCourseName");
-    const dateEl = document.getElementById("certIssueDate");
-    const idEl = document.getElementById("certCredentialId");
-    const orgNameEl = document.getElementById("certOrgName");
-    const taglineEl = document.getElementById("certOrgTagline");
-    const descEl = document.getElementById("certBodyDescription");
-    const sig1NameEl = document.getElementById("certSig1Name");
-    const sig1TitleEl = document.getElementById("certSig1Title");
-    const sig1SignEl = document.getElementById("certSig1Sign");
-    const sig2NameEl = document.getElementById("certSig2Name");
-    const sig2TitleEl = document.getElementById("certSig2Title");
-    const sig2SignEl = document.getElementById("certSig2Sign");
+    // Hindi fields
+    const pNameHindiEl = document.getElementById("certParticipantHindi");
+    const progHindiEl = document.getElementById("certProgrammeHindi");
+    const durHindiEl = document.getElementById("certDurationHindi");
+    const perHindiEl = document.getElementById("certPeriodHindi");
 
-    // Dynamic text injection
-    if (nameEl) nameEl.textContent = candidate.name || "Recipient Name";
-    if (courseEl) courseEl.textContent = candidate.course || CONFIG.CERTIFICATE.defaultCourse;
-    if (dateEl) dateEl.textContent = candidate.date || CONFIG.CERTIFICATE.defaultDate;
-    if (idEl) idEl.textContent = candidate.certId || "NX-2026-0000";
+    // English fields
+    const pNameEngEl = document.getElementById("certRecipientName");
+    const progEngEl = document.getElementById("certProgrammeEnglish");
+    const durEngEl = document.getElementById("certDurationEnglish");
+    const perEngEl = document.getElementById("certPeriodEnglish");
 
-    if (orgNameEl) orgNameEl.textContent = CONFIG.ORGANIZATION.name;
-    if (taglineEl) taglineEl.textContent = CONFIG.ORGANIZATION.tagline;
-    if (descEl) descEl.textContent = CONFIG.CERTIFICATE.descriptionTemplate;
+    // Meta & ID fields
+    const certIdEl = document.getElementById("certCredentialId");
+    const photoImgEl = document.getElementById("certParticipantPhoto");
 
-    // Signatures
-    if (CONFIG.CERTIFICATE.signers && CONFIG.CERTIFICATE.signers.length > 0) {
-      const s1 = CONFIG.CERTIFICATE.signers[0];
-      if (sig1NameEl) sig1NameEl.textContent = s1.name;
-      if (sig1TitleEl) sig1TitleEl.textContent = s1.title;
-      if (sig1SignEl) sig1SignEl.textContent = s1.signatureText;
-    }
-    if (CONFIG.CERTIFICATE.signers && CONFIG.CERTIFICATE.signers.length > 1) {
-      const s2 = CONFIG.CERTIFICATE.signers[1];
-      if (sig2NameEl) sig2NameEl.textContent = s2.name;
-      if (sig2TitleEl) sig2TitleEl.textContent = s2.title;
-      if (sig2SignEl) sig2SignEl.textContent = s2.signatureText;
-    }
+    if (pNameHindiEl) pNameHindiEl.textContent = candidate.nameHindi || candidate.name;
+    if (progHindiEl) progHindiEl.textContent = candidate.programmeHindi || CONFIG.CERTIFICATE.defaultProgrammeHindi;
+    if (durHindiEl) durHindiEl.textContent = candidate.durationHindi || candidate.duration || CONFIG.CERTIFICATE.defaultDurationHindi;
+    if (perHindiEl) perHindiEl.textContent = candidate.periodHindi || candidate.period || CONFIG.CERTIFICATE.defaultPeriodHindi;
+
+    if (pNameEngEl) pNameEngEl.textContent = candidate.name || "Name of Participant";
+    if (progEngEl) progEngEl.textContent = candidate.programme || CONFIG.CERTIFICATE.defaultProgramme;
+    if (durEngEl) durEngEl.textContent = candidate.duration || CONFIG.CERTIFICATE.defaultDuration;
+    if (perEngEl) perEngEl.textContent = candidate.period || CONFIG.CERTIFICATE.defaultPeriod;
+
+    if (certIdEl) certIdEl.textContent = candidate.certId || "IIMI-EP-2026-0001";
 
     // Dynamic Font Scaling for very long names
-    if (nameEl) {
-      const nameLength = (candidate.name || "").length;
-      if (nameLength > 30) {
-        nameEl.style.fontSize = "2.1rem";
-      } else if (nameLength > 22) {
-        nameEl.style.fontSize = "2.6rem";
+    if (pNameEngEl) {
+      const len = (candidate.name || "").length;
+      if (len > 30) {
+        pNameEngEl.style.fontSize = "1.15rem";
+      } else if (len > 22) {
+        pNameEngEl.style.fontSize = "1.3rem";
       } else {
-        nameEl.style.fontSize = "3.5rem";
+        pNameEngEl.style.fontSize = "1.48rem";
       }
+    }
+
+    // Candidate Photo
+    if (photoImgEl) {
+      photoImgEl.src = candidate.photoUrl || "assets/avatar.svg";
+      photoImgEl.onerror = () => {
+        photoImgEl.src = "assets/avatar.svg";
+      };
+    }
+
+    // Generate Dynamic QR Code
+    generateCertificateQr(candidate.certId);
+  }
+
+  /**
+   * Generate QR Code into #certQrCode element
+   */
+  function generateCertificateQr(certId) {
+    const qrContainer = document.getElementById("certQrCode");
+    if (!qrContainer) return;
+
+    qrContainer.innerHTML = "";
+    const verifyUrl = `${CONFIG.ORGANIZATION.verifyUrlBase}${encodeURIComponent(certId)}`;
+
+    if (typeof QRCode !== "undefined") {
+      try {
+        qrCodeInstance = new QRCode(qrContainer, {
+          text: verifyUrl,
+          width: 64,
+          height: 64,
+          colorDark: "#0f172a",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      } catch (err) {
+        console.warn("QRCode generation error:", err);
+      }
+    } else {
+      // Fallback clean QR graphic if CDN offline
+      const img = document.createElement("img");
+      img.src = `https://api.qrserver.com/v1/create-qr-code/?size=64x64&data=${encodeURIComponent(verifyUrl)}`;
+      img.alt = "Verification QR Code";
+      img.style.width = "100%";
+      img.style.height = "100%";
+      qrContainer.appendChild(img);
     }
   }
 
@@ -171,14 +321,15 @@ const CertificateManager = (function() {
       throw new Error("Certificate element #certificateCanvas not found in DOM.");
     }
 
-    // Wait for fonts to be ready
     if (document.fonts) {
       await document.fonts.ready;
     }
 
-    // Optimized capture: scale 2.0 provides ~300 DPI print quality without bloating memory
+    // Wait a brief tick for QR image/canvas to settle
+    await new Promise(resolve => setTimeout(resolve, 80));
+
     const canvas = await html2canvas(certElement, {
-      scale: 2.0,
+      scale: 2.2, // ~300 DPI print quality
       useCORS: true,
       allowTaint: true,
       backgroundColor: "#ffffff",
@@ -190,11 +341,10 @@ const CertificateManager = (function() {
   }
 
   /**
-   * Convert canvas to a jsPDF instance
+   * Convert canvas to a landscape A4 jsPDF instance
    */
   function canvasToPdf(canvas) {
     const { jsPDF } = window.jspdf;
-    // Standard Landscape A4: 297mm x 210mm
     const pdf = new jsPDF({
       orientation: "landscape",
       unit: "mm",
@@ -202,31 +352,26 @@ const CertificateManager = (function() {
       compress: true
     });
 
-    // High quality JPEG compression (0.91 quality) keeps file size around 300KB - 600KB, well under 1MB
-    const imgData = canvas.toDataURL("image/jpeg", 0.91);
+    // Clean JPEG compression under 600KB
+    const imgData = canvas.toDataURL("image/jpeg", 0.92);
     pdf.addImage(imgData, "JPEG", 0, 0, 297, 210, undefined, "FAST");
-
     return pdf;
   }
 
   /**
-   * Generate PDF Base64 string for an arbitrary candidate row (used by mailer)
+   * Generate PDF Base64 string for an individual candidate (used by mailer)
    */
   async function generatePdfBase64(candidate) {
     updateCertificatePreview(candidate);
-    // Allow DOM to settle
-    await new Promise(resolve => setTimeout(resolve, 80));
+    await new Promise(resolve => setTimeout(resolve, 90));
 
     const canvas = await renderCertCanvas();
     const pdf = canvasToPdf(canvas);
-
-    // Get base64 string
-    const dataUri = pdf.output("datauristring");
-    return dataUri;
+    return pdf.output("datauristring");
   }
 
   /**
-   * Download a single candidate certificate as PDF
+   * Download single PDF
    */
   async function downloadSinglePdf(candidate) {
     const btn = document.getElementById("downloadSinglePdfBtn");
@@ -244,8 +389,8 @@ const CertificateManager = (function() {
       const canvas = await renderCertCanvas();
       const pdf = canvasToPdf(canvas);
 
-      const safeName = (candidate.name || "Candidate").replace(/[^a-zA-Z0-9_-]/g, "_");
-      const filename = `Certificate_${safeName}.pdf`;
+      const safeName = (candidate.name || "Participant").replace(/[^a-zA-Z0-9_-]/g, "_");
+      const filename = `Certificate_${safeName}_${candidate.certId}.pdf`;
 
       pdf.save(filename);
       UI.showToast("PDF Downloaded", `Saved ${filename}`, "success");
@@ -261,14 +406,14 @@ const CertificateManager = (function() {
   }
 
   /**
-   * Download all valid certificates as a single compressed ZIP file
+   * Download all valid certificates as a ZIP archive
    */
   async function downloadAllCertificatesZip() {
     if (isGeneratingZip) return;
 
     const validRows = ExcelManager.getValidRows();
     if (validRows.length === 0) {
-      UI.showToast("No Valid Candidates", "Upload valid candidates first.", "warning");
+      UI.showToast("No Valid Candidates", "Upload valid candidate records first.", "warning");
       return;
     }
 
@@ -280,11 +425,10 @@ const CertificateManager = (function() {
       if (btn) btn.disabled = true;
 
       const zip = new JSZip();
-      const certFolder = zip.folder("Certificates");
+      const certFolder = zip.folder("IIM_Indore_Certificates");
 
-      UI.showToast("Generating ZIP Archive", `Processing ${validRows.length} certificates. Please wait...`, "info", 6000);
+      UI.showToast("Generating ZIP Archive", `Rendering ${validRows.length} certificates. Please wait...`, "info", 5000);
 
-      // Sequentially render each candidate to avoid memory explosion
       for (let i = 0; i < validRows.length; i++) {
         const cand = validRows[i];
         if (btn) {
@@ -298,8 +442,8 @@ const CertificateManager = (function() {
         const pdf = canvasToPdf(canvas);
         const pdfArrayBuffer = pdf.output("arraybuffer");
 
-        const safeName = (cand.name || `Candidate_${i + 1}`).replace(/[^a-zA-Z0-9_-]/g, "_");
-        const filename = `Certificate_${safeName}_${cand.certId || (i + 1)}.pdf`;
+        const safeName = (cand.name || `Participant_${i + 1}`).replace(/[^a-zA-Z0-9_-]/g, "_");
+        const filename = `Certificate_${safeName}_${cand.certId}.pdf`;
 
         certFolder.file(filename, pdfArrayBuffer);
       }
@@ -308,24 +452,22 @@ const CertificateManager = (function() {
         btn.innerHTML = `<span class="spinner"></span> Compressing ZIP...`;
       }
 
-      // Generate the complete ZIP archive
       const zipBlob = await zip.generateAsync({
         type: "blob",
         compression: "DEFLATE",
         compressionOptions: { level: 6 }
       });
 
-      // Trigger download
       const downloadUrl = URL.createObjectURL(zipBlob);
       const a = document.createElement("a");
       a.href = downloadUrl;
-      a.download = `Certificates_Batch_${new Date().toISOString().slice(0, 10)}.zip`;
+      a.download = `IIM_Indore_Certificates_${new Date().toISOString().slice(0, 10)}.zip`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(downloadUrl);
 
-      UI.showToast("Batch Export Complete", `Downloaded ZIP containing ${validRows.length} certificates.`, "success");
+      UI.showToast("Batch Export Complete", `Downloaded ${validRows.length} certificates in ZIP.`, "success");
       UI.celebrateConfetti();
     } catch (err) {
       console.error("ZIP Generation error:", err);
@@ -336,7 +478,6 @@ const CertificateManager = (function() {
         btn.disabled = false;
         btn.innerHTML = originalText;
       }
-      // Restore preview to the active candidate
       if (activeCandidate) {
         updateCertificatePreview(activeCandidate);
       }
@@ -357,6 +498,8 @@ const CertificateManager = (function() {
     init,
     onEnterStep,
     updateCertificatePreview,
+    updateApprovalStateUI,
+    updateApprovalCount,
     downloadSinglePdf,
     downloadAllCertificatesZip,
     generatePdfBase64

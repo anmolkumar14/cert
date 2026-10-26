@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Certificate Generator Portal Dashboard: Upload candidate rosters, generate landscape A4 certificates, and dispatch personalized PDFs via automated emails.">
-  <title>Dashboard — Certificate Generator Portal</title>
+  <meta name="description" content="IIM Indore Executive Education Certificate Generator Portal: Upload roster, inspect email syntax, preview bilingual certificates with photo and QR code, approve candidates, and dispatch verified PDFs.">
+  <title>IIM Indore — Certificate Generator & Dispatch Portal</title>
   
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
@@ -21,6 +21,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <!-- JSZip (Batch Archive Compressor) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <!-- QRCode.js (Client-Side Verification QR Code Engine) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <!-- Canvas Confetti (Celebration Particles) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.2/confetti.browser.min.js"></script>
 </head>
@@ -36,10 +38,10 @@
     <!-- Top Navigation Bar -->
     <header class="navbar" role="banner">
       <a href="dashboard.html" class="brand-wrapper" aria-label="Dashboard Home">
-        <img src="assets/logo.svg" alt="Nexus Logo" class="brand-logo" width="38" height="38">
+        <img src="assets/logo.svg" alt="IIM Indore Logo" class="brand-logo" width="38" height="38">
         <div>
-          <span class="brand-title">Nexus Certify</span>
-          <span class="brand-badge">Admin Suite</span>
+          <span class="brand-title">IIM Indore</span>
+          <span class="brand-badge">Certify Portal</span>
         </div>
       </a>
 
@@ -74,27 +76,27 @@
         <!-- Step 1 Button -->
         <button class="step-item active" data-step="1" id="stepBtn1">
           <div class="step-circle">1</div>
-          <span class="step-label">Upload Roster</span>
+          <span class="step-label">Upload & Check</span>
         </button>
 
         <!-- Step 2 Button -->
         <button class="step-item" data-step="2" id="stepBtn2">
           <div class="step-circle">2</div>
-          <span class="step-label">Preview & Export</span>
+          <span class="step-label">Preview & Validate</span>
         </button>
 
         <!-- Step 3 Button -->
         <button class="step-item" data-step="3" id="stepBtn3">
           <div class="step-circle">3</div>
-          <span class="step-label">Dispatch Emails</span>
+          <span class="step-label">Dispatch Approved</span>
         </button>
       </nav>
 
       <!-- ================================================================== -->
-      <!-- STEP 1: EXCEL UPLOAD & DATA VALIDATION -->
+      <!-- STEP 1: EXCEL UPLOAD & EMAIL STRUCTURE VALIDATION -->
       <!-- ================================================================== -->
       <section id="stepContent1" class="step-content active" aria-labelledby="step1Heading">
-        <h2 id="step1Heading" class="hidden">Step 1: Upload Roster</h2>
+        <h2 id="step1Heading" class="hidden">Step 1: Upload Roster & Check Email Structure</h2>
 
         <div class="upload-grid">
           <!-- Drag-and-Drop Area -->
@@ -107,8 +109,8 @@
               <line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
 
-            <h3 class="dropzone-title">Drag & Drop Candidate Spreadsheet</h3>
-            <p class="dropzone-sub">Drop your Excel (.xlsx, .xls) or CSV (.csv) file here, or click to browse</p>
+            <h3 class="dropzone-title">Upload IIM Indore Candidate Roster</h3>
+            <p class="dropzone-sub">Drag & drop your Excel (.xlsx, .xls) or CSV (.csv) file here, or click to browse</p>
 
             <div class="chip-container">
               <span class="format-chip">.XLSX</span>
@@ -117,7 +119,7 @@
             </div>
           </div>
 
-          <!-- Upload Actions Bar & Quick Sample Generator -->
+          <!-- Upload Actions Bar & Sample Template Generator -->
           <div class="upload-actions-bar">
             <div class="stats-card-group">
               <div class="mini-stat-card">
@@ -126,7 +128,7 @@
                 </div>
                 <div>
                   <div id="statTotalRows" class="stat-value">0</div>
-                  <div class="stat-label">Total Rows</div>
+                  <div class="stat-label">Total Uploaded</div>
                 </div>
               </div>
 
@@ -136,7 +138,7 @@
                 </div>
                 <div>
                   <div id="statValidRows" class="stat-value" style="color: var(--status-success);">0</div>
-                  <div class="stat-label">Valid Ready</div>
+                  <div class="stat-label">Valid Emails</div>
                 </div>
               </div>
 
@@ -146,25 +148,30 @@
                 </div>
                 <div>
                   <div id="statInvalidRows" class="stat-value" style="color: var(--status-danger);">0</div>
-                  <div class="stat-label">Invalid Rows</div>
+                  <div class="stat-label">Malformed Syntax</div>
                 </div>
               </div>
             </div>
 
             <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-              <button id="downloadTemplateBtn" class="btn btn-secondary" title="Download sample Excel roster template">
+              <button id="loadWorkspaceFileBtn" class="btn btn-primary" title="Instantly load IIMcandidatelist.xlsx from workspace">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><polyline points="12 11 12 17 16 13"/></svg>
+                <span>Load IIMcandidatelist.xlsx</span>
+              </button>
+
+              <button id="downloadTemplateBtn" class="btn btn-secondary" title="Download sample IIM Indore candidate Excel template">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                <span>Download Sample Template</span>
+                <span>Download IIM Template (.xlsx)</span>
               </button>
             </div>
           </div>
 
-          <!-- Parsed Data Table Section (Hidden until file is uploaded) -->
+          <!-- Parsed Data Table Section -->
           <div id="parsedTableSection" class="glass-card hidden" style="padding: 1.5rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
               <!-- Table Filters -->
               <div style="display: flex; gap: 0.5rem; align-items: center;">
-                <button id="filterAllBtn" class="btn btn-sm btn-primary">All Records</button>
+                <button id="filterAllBtn" class="btn btn-sm btn-primary">All Candidates</button>
                 <button id="filterValidBtn" class="btn btn-sm btn-secondary">Valid Only</button>
                 <button id="filterInvalidBtn" class="btn btn-sm btn-secondary">Invalid Only</button>
               </div>
@@ -175,25 +182,25 @@
                   type="text" 
                   id="tableSearchInput" 
                   class="form-input" 
-                  style="width: 220px; padding: 0.45rem 0.85rem; font-size: 0.85rem;" 
-                  placeholder="Filter by name or email..."
+                  style="width: 240px; padding: 0.45rem 0.85rem; font-size: 0.85rem;" 
+                  placeholder="Search participant or email..."
                 >
                 <button id="clearDataBtn" class="btn btn-sm btn-outline-danger" title="Clear all parsed rows">Clear All</button>
               </div>
             </div>
 
-            <!-- Table Responsive Wrap -->
+            <!-- Table Responsive Wrap with Email Structure Checking Column -->
             <div class="table-responsive">
               <table class="custom-table" aria-label="Parsed Candidates Table">
                 <thead>
                   <tr>
                     <th scope="col">#</th>
-                    <th scope="col">Candidate Name</th>
-                    <th scope="col">Email Address</th>
-                    <th scope="col">Course / Program</th>
-                    <th scope="col">Date</th>
-                    <th scope="col">Certificate ID</th>
-                    <th scope="col">Validation</th>
+                    <th scope="col">Participant Name</th>
+                    <th scope="col">Email & RFC Structure Check</th>
+                    <th scope="col">Programme Name</th>
+                    <th scope="col">Duration & Period</th>
+                    <th scope="col">Credential ID</th>
+                    <th scope="col">Status</th>
                     <th scope="col" style="text-align: right;">Action</th>
                   </tr>
                 </thead>
@@ -206,7 +213,7 @@
             <!-- Next Step Action -->
             <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem;">
               <button id="proceedToStep2Btn" class="btn btn-primary" disabled>
-                <span>Proceed to Step 2: Preview &rarr;</span>
+                <span>Proceed to Step 2: Preview & Validate &rarr;</span>
               </button>
             </div>
           </div>
@@ -214,18 +221,24 @@
       </section>
 
       <!-- ================================================================== -->
-      <!-- STEP 2: CERTIFICATE PREVIEW & PDF/ZIP EXPORT -->
+      <!-- STEP 2: BILINGUAL CERTIFICATE PREVIEW & ADMIN VALIDATION -->
       <!-- ================================================================== -->
       <section id="stepContent2" class="step-content" aria-labelledby="step2Heading">
-        <h2 id="step2Heading" class="hidden">Step 2: Certificate Preview & Export</h2>
+        <h2 id="step2Heading" class="hidden">Step 2: Certificate Preview & Admin Approval</h2>
 
         <div class="preview-layout">
-          <!-- Left Sidebar: Candidate Selector & Export Actions -->
+          <!-- Left Sidebar: Candidate Selector & Admin Approval Controls -->
           <div class="preview-sidebar glass-card">
             <div>
               <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.25rem;">Candidate Roster</h3>
-              <p id="previewCandidateCount" style="font-size: 0.8rem; color: var(--text-muted);">0 Candidates</p>
+              <p id="previewCandidateCount" style="font-size: 0.8rem; color: var(--text-muted);">0 Approved</p>
             </div>
+
+            <!-- Bulk Approve All Candidates Button -->
+            <button id="approveAllCandidatesBtn" class="btn btn-secondary btn-sm" style="width: 100%; border-color: rgba(16, 185, 129, 0.4); color: #10b981;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Approve All Candidates</span>
+            </button>
 
             <!-- Candidate selector list -->
             <div id="previewCandidateList" class="candidate-selector-list">
@@ -256,79 +269,137 @@
             </div>
           </div>
 
-          <!-- Right Stage: Live Landscape A4 Certificate Preview -->
+          <!-- Right Stage: Live IIM Indore Landscape A4 Certificate Preview -->
           <div class="preview-stage-container">
+            <!-- Admin Preview & Approval Control Bar -->
+            <div class="admin-validation-card glass-card" style="width: 100%; max-width: 900px;">
+              <div>
+                <div style="font-size: 0.78rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600; letter-spacing: 0.5px;">Candidate Preview</div>
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 2px;">
+                  <span id="approvalCandidateName" style="font-size: 1.15rem; font-weight: 700;">Participant Name</span>
+                  <div id="currentCandidateApprovalBadge">
+                    <span class="approval-badge-pending">Awaiting Validation</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Action buttons for current previewed candidate -->
+              <div style="display: flex; gap: 0.65rem; align-items: center;">
+                <!-- Validate & Approve Button -->
+                <button id="approveCurrentCandidateBtn" class="btn btn-approve btn-sm">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>Validate & Approve for Emailing</span>
+                </button>
+
+                <!-- Revoke Button (hidden by default) -->
+                <button id="revokeApprovalBtn" class="btn btn-outline-danger btn-sm" style="display: none;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  <span>Revoke Approval</span>
+                </button>
+
+                <!-- Toggle Watermark Button -->
+                <button id="toggleWatermarkBtn" class="btn btn-secondary btn-sm" title="Toggle 'SAMPLE' watermark display">
+                  Hide Watermark
+                </button>
+              </div>
+            </div>
+
+            <!-- The Printable Landscape A4 Certificate Frame -->
             <div class="certificate-frame-wrap">
-              <!-- Printable Certificate Canvas (Standard A4 Landscape) -->
               <div id="certificateCanvas" class="certificate-canvas">
-                <!-- Ornate Gold Borders -->
-                <div class="cert-outer-border"></div>
-                <div class="cert-inner-border"></div>
+                <!-- Stepped Magenta Double Border -->
+                <div class="cert-iim-border-outer"></div>
+                <div class="cert-iim-border-inner"></div>
 
-                <!-- Corner Flourishes -->
-                <div class="cert-corner cert-corner-tl"></div>
-                <div class="cert-corner cert-corner-tr"></div>
-                <div class="cert-corner cert-corner-bl"></div>
-                <div class="cert-corner cert-corner-br"></div>
+                <!-- Stepped Corner Bracket Flourishes -->
+                <div class="cert-corner-step cert-corner-step-tl"></div>
+                <div class="cert-corner-step cert-corner-step-tr"></div>
+                <div class="cert-corner-step cert-corner-step-bl"></div>
+                <div class="cert-corner-step cert-corner-step-br"></div>
 
-                <!-- Watermark Logo -->
-                <img src="assets/logo.svg" alt="" class="cert-watermark" aria-hidden="true">
+                <!-- Diagonal "SAMPLE" Watermark -->
+                <div id="certSampleWatermark" class="cert-sample-watermark" aria-hidden="true">SAMPLE</div>
 
-                <!-- Header / Org Branding -->
-                <div class="cert-header">
-                  <img src="assets/logo.svg" alt="Organization Logo" class="cert-logo-img">
-                  <div id="certOrgName" class="cert-org-name">Nexus Institute of Technology</div>
-                  <div id="certOrgTagline" class="cert-org-tagline">Official Credential of Merit & Excellence</div>
-
-                  <div class="cert-title-badge">
-                    <span class="cert-title-text">Certificate of Achievement</span>
+                <!-- Top Header: Logo (Left), Institutional Titles (Center), Photo & QR (Right) -->
+                <div class="cert-top-header">
+                  <!-- Left Logo -->
+                  <div class="cert-header-left">
+                    <img src="assets/logo.svg" alt="IIM Indore Logo" class="cert-inst-logo">
                   </div>
 
-                  <div class="cert-subtitle">This is proudly presented to</div>
-                </div>
-
-                <!-- Recipient Calligraphy Name -->
-                <div class="cert-recipient-block">
-                  <div id="certRecipientName" class="cert-recipient-name">Candidate Name</div>
-                  <div class="cert-divider-line"></div>
-                  <p class="cert-body-text">
-                    <span id="certBodyDescription">For successfully fulfilling all curriculum requirements, demonstrating outstanding mastery of modern technologies, and completing capstone projects with academic distinction in</span>
-                    <strong id="certCourseName" class="cert-course-highlight">Advanced Full-Stack Engineering & Cloud Architecture</strong>
-                  </p>
-                </div>
-
-                <!-- Footer Signatures & Gold Seal -->
-                <div class="cert-footer">
-                  <!-- Signer 1 -->
-                  <div class="cert-sig-block">
-                    <div id="certSig1Sign" class="cert-sig-handwriting">Elena Rostova</div>
-                    <div class="cert-sig-line"></div>
-                    <div id="certSig1Name" class="cert-sig-name">Dr. Elena Rostova</div>
-                    <div id="certSig1Title" class="cert-sig-title">Dean of Engineering</div>
+                  <!-- Center Titles -->
+                  <div class="cert-header-center">
+                    <div class="cert-title-hindi">भारतीय प्रबंध संस्थान इंदौर</div>
+                    <div class="cert-title-english">INDIAN INSTITUTE OF MANAGEMENT INDORE</div>
+                    <div class="cert-header-rule"></div>
                   </div>
 
-                  <!-- Central Gold Medallion Seal -->
-                  <div class="cert-seal">
-                    <div class="cert-ribbon-left"></div>
-                    <div class="cert-ribbon-right"></div>
-                    <span class="cert-seal-star">&#9733;</span>
-                    <span class="cert-seal-text">VERIFIED</span>
-                    <span class="cert-seal-text" style="font-size: 0.4rem;">EXCELLENCE</span>
-                  </div>
-
-                  <!-- Signer 2 -->
-                  <div class="cert-sig-block">
-                    <div id="certSig2Sign" class="cert-sig-handwriting">Marcus Sterling</div>
-                    <div class="cert-sig-line"></div>
-                    <div id="certSig2Name" class="cert-sig-name">Marcus Sterling</div>
-                    <div id="certSig2Title" class="cert-sig-title">Board Chairperson</div>
+                  <!-- Right: Photo Frame & QR Code -->
+                  <div class="cert-header-right">
+                    <div class="cert-photo-frame" title="Participant Photo">
+                      <img id="certParticipantPhoto" src="assets/avatar.svg" alt="Participant Photo" class="cert-photo-img">
+                    </div>
+                    <div class="cert-qr-frame" id="certQrCode" title="Verification QR Code">
+                      <!-- Rendered by QRCode.js -->
+                    </div>
                   </div>
                 </div>
 
-                <!-- Metadata bottom strip -->
-                <div class="cert-meta-bar">
-                  <span>Issued: <strong id="certIssueDate">October 26, 2026</strong></span>
-                  <span>Credential ID: <strong id="certCredentialId" style="font-family: monospace;">NX-2026-0001</strong></span>
+                <!-- Center Bilingual Certificate Text -->
+                <div class="cert-bilingual-body">
+                  <!-- Hindi Section -->
+                  <div class="cert-section-hindi">
+                    <div>प्रमाणित किया जाता है कि</div>
+                    <div id="certParticipantHindi" class="cert-pname-hindi">प्रतिभागी का नाम</div>
+                    <div>ने <strong id="certPeriodHindi">महीना वर्ष से महीना वर्ष</strong> के दौरान</div>
+                    <div>भारतीय प्रबंध संस्थान इंदौर द्वारा आयोजित <strong id="certDurationHindi">अवधि</strong> का ऑनलाइन (एसिंक्रोनस)</div>
+                    <div id="certProgrammeHindi" class="cert-prog-hindi">प्रोग्राम का नाम</div>
+                    <div>सफलतापूर्वक पूर्ण किया।</div>
+                  </div>
+
+                  <!-- English Section -->
+                  <div class="cert-section-english">
+                    <div>This is to certify that</div>
+                    <div id="certRecipientName" class="cert-pname-english">Name of Participant</div>
+                    <div>has successfully completed the <strong id="certDurationEnglish" class="cert-highlight">Duration</strong> online (asynchronous)</div>
+                    <div id="certProgrammeEnglish" class="cert-prog-english">Programme Name</div>
+                    <div>conducted by</div>
+                    <div>the Indian Institute of Management Indore</div>
+                    <div>during <strong id="certPeriodEnglish" class="cert-highlight">Month Year to Month Year</strong>.</div>
+                  </div>
+                </div>
+
+                <!-- Three Institutional Signatures Aligned Horizontally -->
+                <div class="cert-signatures-grid">
+                  <!-- Signer 1: Coordinator -->
+                  <div class="cert-sig-item">
+                    <div class="cert-sig-script" id="certSig1Sign">S. R. Sharma</div>
+                    <div class="cert-sig-divider"></div>
+                    <div class="cert-sig-hindi">कार्यक्रम समन्वयक</div>
+                    <div class="cert-sig-english">Programme Coordinator</div>
+                  </div>
+
+                  <!-- Signer 2: Chairperson -->
+                  <div class="cert-sig-item">
+                    <div class="cert-sig-script" id="certSig2Sign">Ananya Gupta</div>
+                    <div class="cert-sig-divider"></div>
+                    <div class="cert-sig-hindi">अध्यक्ष, कार्यपालक शिक्षा</div>
+                    <div class="cert-sig-english">Chairperson, Executive Education</div>
+                  </div>
+
+                  <!-- Signer 3: Director -->
+                  <div class="cert-sig-item">
+                    <div class="cert-sig-script" id="certSig3Sign">Himanshu Rai</div>
+                    <div class="cert-sig-divider"></div>
+                    <div class="cert-sig-hindi">निदेशक, भा. प्र. सं. इंदौर</div>
+                    <div class="cert-sig-english">Director, IIM Indore</div>
+                  </div>
+                </div>
+
+                <!-- Bottom Metadata Bar -->
+                <div class="cert-bottom-bar">
+                  <span>Executive Education Office, IIM Indore</span>
+                  <span>Credential ID: <strong id="certCredentialId" style="font-family: monospace;">IIMI-EP-2026-0001</strong></span>
                 </div>
               </div>
             </div>
@@ -337,22 +408,22 @@
       </section>
 
       <!-- ================================================================== -->
-      <!-- STEP 3: DISPATCH EMAILS & REAL-TIME QUEUE -->
+      <!-- STEP 3: DISPATCH APPROVED CERTIFICATES & AUDIT QUEUE -->
       <!-- ================================================================== -->
       <section id="stepContent3" class="step-content" aria-labelledby="step3Heading">
-        <h2 id="step3Heading" class="hidden">Step 3: Dispatch Emails</h2>
+        <h2 id="step3Heading" class="hidden">Step 3: Dispatch Approved Certificates</h2>
 
         <div class="dispatch-grid">
-          <!-- Gmail Quota Notice Banner -->
+          <!-- Gmail Quota & Admin Approval Gate Notice -->
           <div class="quota-banner glass-card">
             <div class="quota-info-text">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-cyan);">
-                <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
               </svg>
               <div>
-                <strong>Google Mail Daily Quota:</strong>
+                <strong>Admin Approval Gating Active:</strong>
                 <span style="color: var(--text-secondary); font-size: 0.85rem; margin-left: 4px;">
-                  Standard consumer Gmail accounts are limited to ~100 emails/24h. Google Workspace accounts support up to 1,500/day.
+                  Only certificates validated & approved by the admin in Step 2 are dispatched. Standard Gmail limits to ~100/day (Google Workspace supports ~1,500/day).
                 </span>
               </div>
             </div>
@@ -366,7 +437,7 @@
           <div class="progress-section glass-card">
             <div class="progress-header">
               <div>
-                <h3 style="font-size: 1.15rem; font-weight: 700;">Delivery Dispatch Progress</h3>
+                <h3 style="font-size: 1.15rem; font-weight: 700;">Approved Dispatch Queue Progress</h3>
                 <p id="dispatchProgressCount" style="font-size: 0.82rem; color: var(--text-muted);">0 of 0 processed</p>
               </div>
               <div id="dispatchProgressPercent" style="font-size: 1.5rem; font-weight: 800; color: var(--accent-primary);">0%</div>
@@ -379,9 +450,9 @@
 
             <!-- Controls -->
             <div class="dispatch-controls">
-              <button id="sendAllBtn" class="btn btn-primary">
+              <button id="sendAllBtn" class="btn btn-primary" disabled>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                <span>Send All Certificates</span>
+                <span>Send Approved Certificates</span>
               </button>
 
               <button id="retryFailedBtn" class="btn btn-secondary" style="display: none;">
@@ -403,9 +474,9 @@
             </div>
           </div>
 
-          <!-- Live Sending Status Table -->
+          <!-- Live Sending Status Table with Admin Approval Column -->
           <div class="glass-card" style="padding: 1.5rem;">
-            <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem;">Candidate Dispatch Queue</h3>
+            <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem;">Candidate Dispatch & Validation Queue</h3>
             <div class="table-responsive">
               <table class="custom-table" aria-label="Dispatch Queue Table">
                 <thead>
@@ -413,6 +484,7 @@
                     <th scope="col">Candidate</th>
                     <th scope="col">Email Address</th>
                     <th scope="col">Certificate ID</th>
+                    <th scope="col">Admin Approval</th>
                     <th scope="col">Delivery Status</th>
                     <th scope="col">Server Log / Result</th>
                   </tr>
@@ -432,7 +504,7 @@
             <div class="summary-counts">
               <div class="summary-count-box">
                 <div id="summaryCountTotal" class="summary-num">0</div>
-                <div class="summary-label">Total Candidates</div>
+                <div class="summary-label">Total Approved</div>
               </div>
               <div class="summary-count-box">
                 <div id="summaryCountSent" class="summary-num" style="color: var(--status-success);">0</div>
@@ -468,22 +540,17 @@
   <!-- App Bootstrap Initialization -->
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      // 1. Guard route: redirect if not logged in
       Auth.guardRoute("dashboard");
-
-      // 2. Initialize UI Navigation & Stepper
       UI.initStepper();
 
-      // 3. Initialize Step Controllers
       ExcelManager.init();
       CertificateManager.init();
       MailerManager.init();
 
-      // Expose navigation validator
       window.CERT_APP = {
         canNavigateToStep: (step) => {
           if (step === 2) return ExcelManager.getValidRows().length > 0;
-          if (step === 3) return ExcelManager.getValidRows().length > 0;
+          if (step === 3) return ExcelManager.getApprovedRows().length > 0;
           return true;
         }
       };
