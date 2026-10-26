@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 52" width="220" height="52" fill="none">
+  <defs>
+    <!-- Adani Signature Flowing Wave Gradients -->
+    <!-- 1. Top Ribbon: Deep Royal Blue to Electric Cyan -->
+    <linearGradient id="adaniBlueRibbon" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#004b87" />
+      <stop offset="60%" stop-color="#0072bc" />
+      <stop offset="100%" stop-color="#00a3e0" />
+    </linearGradient>
+
+    <!-- 2. Middle Ribbon: Cyan to Emerald Teal -->
+    <linearGradient id="adaniTealRibbon" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00a3e0" />
+      <stop offset="65%" stop-color="#00b4d8" />
+      <stop offset="100%" stop-color="#00a88f" />
+    </linearGradient>
+
+    <!-- 3. Bottom Accent Ribbon: Adani Magenta to Royal Purple -->
+    <linearGradient id="adaniPurpleRibbon" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0072bc" />
+      <stop offset="45%" stop-color="#6a1b9a" />
+      <stop offset="100%" stop-color="#9c27b0" />
+    </linearGradient>
+
+    <!-- Drop Shadow Filter -->
+    <filter id="logoShadow" x="-10%" y="-10%" width="125%" height="125%">
+      <feDropShadow dx="0" dy="1.2" stdDeviation="1" flood-color="#004b87" flood-opacity="0.22" />
+    </filter>
+  </defs>
+
+  <!-- ===================================================================== -->
+  <!-- Iconic Adani-Style Flowing Tri-Color Wave (Signature Swash)           -->
+  <!-- ===================================================================== -->
+  <g id="adaniWaveSwash" filter="url(#logoShadow)">
+    <!-- Primary Top Swash (Thick dynamic wave) -->
+    <path d="M 8 13 C 45 3, 85 3, 122 11 C 150 17, 175 15, 212 7" 
+          stroke="url(#adaniBlueRibbon)" stroke-width="4.2" stroke-linecap="round" fill="none" />
+    
+    <!-- Secondary Middle Swash (Teal / Sky flow) -->
+    <path d="M 22 17 C 55 8, 95 8, 132 16 C 160 21, 184 20, 215 13" 
+          stroke="url(#adaniTealRibbon)" stroke-width="2.8" stroke-linecap="round" fill="none" opacity="0.9" />
+
+    <!-- Tertiary Bottom Swash (Magenta / Purple accent) -->
+    <path d="M 42 21 C 74 14, 110 14, 144 21 C 170 25, 194 24, 218 18" 
+          stroke="url(#adaniPurpleRibbon)" stroke-width="1.8" stroke-linecap="round" fill="none" opacity="0.85" />
+  </g>
+
+  <!-- ===================================================================== -->
+  <!-- ARK Wordmark (Bold, rounded corporate font resembling Adani logotype) -->
+  <!-- ===================================================================== -->
+  <g id="arkWordmark">
+    <!-- Main "ARK" Typography -->
+    <text x="8" y="45" 
+          font-family="'Poppins', 'Inter', 'Segoe UI', -apple-system, sans-serif" 
+          font-weight="900" 
+          font-size="30" 
+          letter-spacing="-0.5px" 
+          fill="#0c2340">ARK</text>
+
+    <!-- Vertical separator line -->
+    <line x1="88" y1="26" x2="88" y2="46" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" opacity="0.8" />
+
+    <!-- "LAB" Wordmark with tracking -->
+    <text x="98" y="43" 
+          font-family="'Poppins', 'Inter', 'Segoe UI', sans-serif" 
+          font-weight="800" 
+          font-size="16" 
+          letter-spacing="4px" 
+          fill="#0072bc">LAB</text>
+  </g>
+</svg>

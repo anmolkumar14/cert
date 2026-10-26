@@ -1,6 +1,8 @@
-# 🎓 Certificate Generator Portal
+# 🚀 DTAI Launchpad
+### Executive Certificate Generator & Dispatch Suite
+> **Created and Developed by ARK Lab** &bull; Featuring Adani-styled corporate visual identity
 
-A lightweight, production-quality, serverless **Certificate Generator & Email Dispatch Portal** engineered with plain HTML5, CSS3, and vanilla JavaScript (no build tools, zero dependencies, framework-free). 
+A lightweight, high-performance, serverless **Certificate Generator & Email Dispatch Portal** engineered with plain HTML5, CSS3, and vanilla JavaScript (no build tools, zero dependencies, framework-free). 
 
 Designed to be hosted as a 100% static site on **GitHub Pages**, **Netlify**, or **Vercel**, backed by a free, serverless **Google Apps Script Web App** for secure admin authentication and automated Gmail PDF delivery.
 
@@ -12,11 +14,12 @@ Designed to be hosted as a 100% static site on **GitHub Pages**, **Netlify**, or
 ┌────────────────────────────────────────────────────────┐
 │             Static Frontend (GitHub Pages)             │
 │  • Modern Glassmorphic UI (Dark / Light Themes)        │
-│  • Excel / CSV Drag & Drop Roster Parsing (SheetJS)    │
-│  • Live Landscape A4 Certificate Preview               │
+│  • DTAI Launchpad 🚀 Branding & ARK Lab Attribution    │
+│  • RFC 5322 Strict Email Validation & Roster Parsing   │
+│  • IIM Indore Official Bilingual A4 Landscape Format   │
+│  • Admin Approval Gating: Preview & Validate First     │
 │  • High-Res Client-Side PDF (< 1 MB, html2canvas/jsPDF)│
-│  • Batch ZIP Download (JSZip)                          │
-│  • Rate-Limited Dispatch Queue & Audit Report Exporter │
+│  • Batch ZIP Download (JSZip) & Excel Audit Reports    │
 └──────────────────────────┬─────────────────────────────┘
                            │ fetch() Content-Type: "text/plain"
                            │ (Bypasses CORS preflight)
@@ -28,9 +31,12 @@ Designed to be hosted as a 100% static site on **GitHub Pages**, **Netlify**, or
 └────────────────────────────────────────────────────────┘
 ```
 
+- **DTAI Launchpad Branding**: Modern rocket sign (🚀) brandmark with multi-toned aerospace gradient.
+- **Created & Developed by ARK Lab**: Prominently attributed across all pages with an Adani-style corporate logo mark (tricolor gradient flow arc across modern geometric letterforms).
 - **Zero-Build Architecture**: Deploy directly from Git without Node, Vite, or Webpack.
-- **Modern Glassmorphic Design**: Soft gradient background blobs with fluid animations, frosted glass cards (`backdrop-filter`), glowing focus rings, micro-interactions, dark/light mode toggle with `localStorage` persistence, and confetti celebration bursts.
-- **Intelligent Roster Validation**: Parses `.xlsx`, `.xls`, and `.csv`. Normalizes case-insensitive column synonyms (`Name`, `Email`, `Course`, `Date`, `Certificate ID`). Flags missing names, email syntax errors, and duplicates.
+- **Official IIM Indore Bilingual Template**: Dual Hindi and English typography, double-stepped magenta executive borders, candidate photo placeholder, dynamic verification QR code, and triple signatory stamps.
+- **Strict RFC 5322 Email Validation**: Automatically parses candidate spreadsheets, highlights invalid email patterns, and flags duplicates.
+- **Mandatory Admin Approval Gating**: Candidates must be individually inspected and approved by the administrator before any certificates can be queued or dispatched via email.
 - **Client-Side PDF Generation**: Produces crisp, print-ready landscape A4 PDF certificates (< 1 MB) using `html2canvas` and `jsPDF`.
 - **Batch Export**: Download individual certificates or all certificates in a compressed `.zip` archive via `JSZip`.
 - **Polite Delivery Queue**: Sends emails sequentially with configurable delays (preventing Gmail spam triggers), real-time per-row progress, retry queues for failed rows, and post-dispatch Excel audit logs.
@@ -40,19 +46,23 @@ Designed to be hosted as a 100% static site on **GitHub Pages**, **Netlify**, or
 ## 📁 Repository Structure
 
 ```
-├── index.html            # Admin login page with show/hide password toggle & demo mode
-├── dashboard.html        # Main portal with 3-step stepper (Upload → Preview → Send)
+├── index.html            # DTAI Launchpad login portal with demo credentials
+├── dashboard.html        # Main portal with 3-step stepper (Upload → Preview & Validate → Dispatch)
 ├── css/
 │   └── styles.css        # Complete CSS design system, dark/light themes, and A4 cert styling
 ├── js/
-│   ├── config.js         # Centralized configuration (Apps Script URL, branding, templates)
+│   ├── config.js         # Centralized configuration (Portal branding, IIM Indore copy, templates)
 │   ├── ui.js             # Theme toggle, toast alerts, stepper, confetti, micro-interactions
 │   ├── auth.js           # Session token management, route guards, and demo authorization
-│   ├── excel.js          # SheetJS parser, column normalization, row validator, template export
-│   ├── certificate.js    # Certificate DOM binder, html2canvas/jsPDF renderer, ZIP exporter
-│   └── mailer.js         # Rate-limited sending queue, retries, and Excel audit report
+│   ├── excel.js          # SheetJS parser, RFC 5322 validator, column synonyms, workspace loader
+│   ├── certificate.js    # Certificate DOM binder, QR code generator, html2canvas/jsPDF renderer
+│   └── mailer.js         # Gated dispatch queue (approved rows only), retries, audit report
 ├── assets/
-│   └── logo.svg          # Modern vector emblem with graduation shield and gold seal
+│   ├── rocket.svg        # DTAI Launchpad aerodynamic rocket brandmark
+│   ├── ark-logo.svg      # ARK Lab logo in Adani-styled corporate gradient
+│   ├── avatar.svg        # Candidate executive silhouette portrait
+│   └── logo.svg          # IIM Indore official circular emblem & EQUIS crest
+├── IIMcandidatelist.xlsx # Sample candidate roster with Hindi & English names
 ├── backend/
 │   └── Code.gs           # Serverless Google Apps Script API
 └── README.md             # Documentation and deployment guide

@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Secure Certificate Generator Portal for issuing and dispatching verified digital certificates in high-resolution PDF format.">
-  <title>Admin Login — Certificate Generator Portal</title>
+  <meta name="description" content="DTAI Launchpad Executive Certificate Portal: Issue, preview, and dispatch verified bilingual digital certificates.">
+  <title>DTAI Launchpad — Admin Authentication</title>
   
   <!-- Favicon -->
-  <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+  <link rel="icon" type="image/svg+xml" href="assets/rocket.svg">
 
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css?v=2.1">
 </head>
 <body>
   <!-- Dynamic Background Gradient Blobs -->
@@ -23,11 +23,11 @@
   <div class="app-container">
     <!-- Top Minimal Navbar -->
     <header class="navbar" role="banner">
-      <a href="index.html" class="brand-wrapper" aria-label="Portal Homepage">
-        <img src="assets/logo.svg" alt="Nexus Logo" class="brand-logo" width="38" height="38">
+      <a href="index.html" class="brand-wrapper" aria-label="DTAI Launchpad Homepage">
+        <img src="assets/rocket.svg" alt="Rocket Icon" class="brand-rocket-icon" width="34" height="34">
         <div>
-          <span class="brand-title">Nexus Certify</span>
-          <span class="brand-badge">Admin Portal</span>
+          <span class="portal-title-text">DTAI Launchpad</span>
+          <span class="launchpad-badge">Admin Portal</span>
         </div>
       </a>
 
@@ -42,9 +42,13 @@
     <main class="auth-wrapper" role="main">
       <div class="glass-card glass-card-shine auth-card">
         <div class="auth-header">
-          <img src="assets/logo.svg" alt="Nexus Shield" class="logo-large">
-          <h1>Welcome Back</h1>
-          <p>Sign in to manage and dispatch certificates</p>
+          <img src="assets/rocket.svg" alt="Rocket Icon" class="logo-large" style="width: 72px; height: 72px;">
+          <h1 style="font-size: 1.75rem; margin-bottom: 0.25rem;">DTAI Launchpad</h1>
+          <p style="margin-bottom: 0.5rem;">Certificate Generator & Automated Dispatch Portal</p>
+          <div style="display: flex; align-items: center; justify-content: center; gap: 0.4rem; font-size: 0.8rem; color: var(--text-muted);">
+            <span>Created and Developed by</span>
+            <img src="assets/ark-logo.svg" alt="ARK Lab" style="height: 18px; vertical-align: middle;">
+          </div>
         </div>
 
         <form id="loginForm" autocomplete="on" novalidate>
@@ -117,6 +121,14 @@
         </div>
       </div>
     </main>
+
+    <!-- ARK Lab Attribution Footer -->
+    <footer class="ark-footer-attribution" role="contentinfo">
+      <span>Created and Developed by</span>
+      <a href="#" class="ark-footer-badge" title="ARK Lab">
+        <img src="assets/ark-logo.svg" alt="ARK Lab Logo" class="ark-logo-img">
+      </a>
+    </footer>
 
     <!-- Global Toast Container -->
     <div id="toastContainer" class="toast-container" aria-live="polite"></div>
