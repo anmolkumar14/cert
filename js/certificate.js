@@ -24,6 +24,12 @@ const CertificateManager = (function() {
   let showWatermark = true;
   let currentViewMode = "table"; // 'table' | 'gallery'
   let currentFilterQuery = "";
+  let activeTemplate = "iim-bilingual";
+
+  try {
+    const savedT = localStorage.getItem("dtai_selected_template");
+    if (savedT) activeTemplate = savedT;
+  } catch (e) {}
 
   /**
    * Initialize Step 2 event bindings
@@ -163,6 +169,124 @@ const CertificateManager = (function() {
           renderCertificatesGallery(getFilteredCandidates());
         }
       });
+    }
+
+    // Inspector Direct Student Search
+    const inspectorSearch = document.getElementById("inspectorStudentSearch");
+    if (inspectorSearch) {
+      inspectorSearch.addEventListener("input", (e) => {
+        currentFilterQuery = (e.target.value || "").trim().toLowerCase();
+        if (candidateFilterInput) candidateFilterInput.value = e.target.value;
+        const filtered = getFilteredCandidates();
+        renderCandidateTable(filtered);
+        if (filtered.length > 0) {
+          selectCandidate(filtered[0].id);
+        }
+        if (currentViewMode === "gallery") {
+          renderCertificatesGallery(filtered);
+        }
+      });
+    }
+
+    // Mobile Viewport Scale Toggle
+    const mobileScaleBtn = document.getElementById("mobileScaleToggleBtn");
+    const mobileScaleText = document.getElementById("mobileScaleBtnText");
+    let isMobileFit = false;
+
+    if (mobileScaleBtn) {
+      mobileScaleBtn.addEventListener("click", () => {
+        isMobileFit = !isMobileFit;
+        const certFrames = document.querySelectorAll(".certificate-frame-wrap");
+        certFrames.forEach(f => f.classList.toggle("mobile-cert-fit", isMobileFit));
+        if (mobileScaleText) {
+          mobileScaleText.textContent = isMobileFit ? "🔍 Full Size" : "📱 Fit Screen";
+        }
+        UI.showToast("Mobile View", isMobileFit ? "Scaled certificate to fit screen cleanly." : "Restored full-size landscape canvas.", "info");
+      });
+    }
+
+    // Certificate Template Triggers & Modal
+    const selectTemplateBtn = document.getElementById("selectTemplateBtn");
+    const step2TemplateBtn = document.getElementById("step2TemplateBtn");
+    const closeTemplateModalBtn = document.getElementById("closeTemplateModalBtn");
+    const cancelTemplateBtn = document.getElementById("cancelTemplateBtn");
+    const templateModal = document.getElementById("templateModal");
+
+    const openTemplateModal = () => {
+      if (templateModal) templateModal.classList.remove("hidden");
+    };
+
+    const closeTemplateModal = () => {
+      if (templateModal) templateModal.classList.add("hidden");
+    };
+
+    if (selectTemplateBtn) selectTemplateBtn.addEventListener("click", openTemplateModal);
+    if (step2TemplateBtn) step2TemplateBtn.addEventListener("click", openTemplateModal);
+    if (closeTemplateModalBtn) closeTemplateModalBtn.addEventListener("click", closeTemplateModal);
+    if (cancelTemplateBtn) cancelTemplateBtn.addEventListener("click", closeTemplateModal);
+
+    if (templateModal) {
+      templateModal.addEventListener("click", (e) => {
+        if (e.target === templateModal) closeTemplateModal();
+      });
+    }
+
+    // Template Cards Selection
+    document.querySelectorAll(".template-card").forEach(card => {
+      card.addEventListener("click", () => {
+        const tId = card.dataset.templateId;
+        if (tId) {
+          setTemplate(tId);
+          closeTemplateModal();
+        }
+      });
+    });
+
+    // Apply default/saved template
+    setTemplate(activeTemplate, false);
+  }
+
+  /**
+   * Change Active Certificate Template
+   */
+  function setTemplate(templateId, showToast = true) {
+    activeTemplate = templateId;
+    try {
+      localStorage.setItem("dtai_selected_template", templateId);
+    } catch (e) {}
+
+    const certElement = document.getElementById("certificateCanvas");
+    if (certElement) {
+      certElement.dataset.template = templateId;
+    }
+
+    // Update button text
+    const labelEl = document.getElementById("currentTemplateLabel");
+    const tConfig = (CONFIG.CERTIFICATE.templates || []).find(t => t.id === templateId);
+    if (labelEl) {
+      labelEl.textContent = tConfig ? tConfig.name : templateId;
+    }
+
+    // Update active state in modal
+    document.querySelectorAll(".template-card").forEach(card => {
+      if (card.dataset.templateId === templateId) {
+        card.classList.add("active");
+        const b = card.querySelector(".template-card-badge");
+        if (b) b.textContent = "Active";
+      } else {
+        card.classList.remove("active");
+        const b = card.querySelector(".template-card-badge");
+        if (b) b.textContent = "Select";
+      }
+    });
+
+    // Update gallery if visible
+    if (currentViewMode === "gallery") {
+      renderCertificatesGallery(getFilteredCandidates());
+    }
+
+    if (showToast) {
+      UI.showToast("Template Selected", `Applied: ${tConfig ? tConfig.name : templateId}`, "success");
     }
   }
 
@@ -476,7 +600,7 @@ const CertificateManager = (function() {
 
         <!-- Rendered Certificate Card Frame -->
         <div class="certificate-frame-wrap" style="transform: scale(0.96); transform-origin: top center;">
-          <div class="certificate-canvas">
+          <div class="certificate-canvas" data-template="${activeTemplate}">
             <div class="cert-iim-border-outer"></div>
             <div class="cert-iim-border-inner"></div>
 
@@ -913,6 +1037,7 @@ const CertificateManager = (function() {
   return {
     init,
     onEnterStep,
+    setTemplate,
     updateCertificatePreview,
     updateApprovalStateUI,
     updateApprovalCount,

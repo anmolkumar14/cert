@@ -10,7 +10,7 @@
   <link rel="icon" type="image/svg+xml" href="assets/rocket.svg">
 
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css?v=2.2">
+  <link rel="stylesheet" href="css/styles.css?v=2.5">
 
   <!-- Pinned CDN Libraries -->
   <!-- SheetJS (Spreadsheet Parser & Exporter) -->
@@ -46,6 +46,12 @@
       </a>
 
       <div class="nav-actions">
+        <!-- Certificate Template Selection Button -->
+        <button id="selectTemplateBtn" class="btn btn-secondary btn-sm template-selector-btn" title="Choose Certificate Template">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          <span class="template-btn-label">Template: <strong id="currentTemplateLabel">IIM Bilingual</strong> ▾</span>
+        </button>
+
         <!-- Theme Toggle -->
         <button id="themeToggleBtn" class="theme-toggle-btn" aria-label="Toggle Theme" title="Toggle Theme">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
@@ -330,12 +336,17 @@
             <div class="inspector-nav-bar">
               <div>
                 <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600; letter-spacing: 0.5px;">Currently Viewing Certificate</div>
-                <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 3px;">
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 3px; flex-wrap: wrap;">
                   <span id="approvalCandidateName" style="font-size: 1.25rem; font-weight: 700;">Participant Name</span>
                   <div id="currentCandidateApprovalBadge">
                     <span class="approval-badge-pending">Awaiting Validation</span>
                   </div>
                 </div>
+              </div>
+
+              <!-- Quick Student Search in Inspector -->
+              <div class="inspector-search-container">
+                <input type="search" id="inspectorStudentSearch" class="form-input form-input-sm" placeholder="🔍 Search student name..." autocomplete="off">
               </div>
 
               <!-- Next / Previous Candidate Stepper Buttons -->
@@ -351,6 +362,16 @@
 
               <!-- Inspector Actions -->
               <div style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
+                <button id="step2TemplateBtn" class="btn btn-secondary btn-sm template-selector-btn" title="Change Certificate Template">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                  <span>Template ▾</span>
+                </button>
+
+                <!-- Mobile Viewport Scale Toggle -->
+                <button id="mobileScaleToggleBtn" class="btn btn-secondary btn-sm mobile-scale-btn" title="Toggle Fit Screen on Mobile">
+                  <span id="mobileScaleBtnText">📱 Fit Screen</span>
+                </button>
+
                 <button id="approveCurrentCandidateBtn" class="btn btn-approve btn-sm">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
                   <span>Validate & Approve</span>
@@ -419,9 +440,9 @@
                   <div class="cert-section-hindi">
                     <div>प्रमाणित किया जाता है कि</div>
                     <div id="certParticipantHindi" class="cert-pname-hindi">प्रतिभागी का नाम</div>
-                    <div>ने <strong id="certPeriodHindi">महीना वर्ष से महीना वर्ष</strong> के दौरान</div>
-                    <div>भारतीय प्रबंध संस्थान इंदौर द्वारा आयोजित <strong id="certDurationHindi">अवधि</strong> का ऑनलाइन (एसिंक्रोनस)</div>
-                    <div id="certProgrammeHindi" class="cert-prog-hindi">प्रोग्राम का नाम</div>
+                    <div>ने <strong id="certPeriodHindi">मार्च २०२६ से सितंबर २०२६</strong> के दौरान</div>
+                    <div>भारतीय प्रबंध संस्थान इंदौर द्वारा आयोजित <strong id="certDurationHindi">६ माह</strong> का ऑनलाइन (एसिंक्रोनस)</div>
+                    <div id="certProgrammeHindi" class="cert-prog-hindi">रणनीतिक नेतृत्व और कृत्रिम बुद्धिमत्ता में कार्यकारी कार्यक्रम</div>
                     <div>सफलतापूर्वक पूर्ण किया।</div>
                   </div>
 
@@ -429,11 +450,11 @@
                   <div class="cert-section-english">
                     <div>This is to certify that</div>
                     <div id="certRecipientName" class="cert-pname-english">Name of Participant</div>
-                    <div>has successfully completed the <strong id="certDurationEnglish" class="cert-highlight">Duration</strong> online (asynchronous)</div>
-                    <div id="certProgrammeEnglish" class="cert-prog-english">Programme Name</div>
+                    <div>has successfully completed the <strong id="certDurationEnglish" class="cert-highlight">6 Months</strong> online (asynchronous)</div>
+                    <div id="certProgrammeEnglish" class="cert-prog-english">Executive Programme in Strategic Leadership & Artificial Intelligence</div>
                     <div>conducted by</div>
                     <div>the Indian Institute of Management Indore</div>
-                    <div>during <strong id="certPeriodEnglish" class="cert-highlight">Month Year to Month Year</strong>.</div>
+                    <div>during <strong id="certPeriodEnglish" class="cert-highlight">March 2026 to September 2026</strong>.</div>
                   </div>
                 </div>
 
@@ -561,7 +582,10 @@
 
           <!-- Live Sending Status Table with Admin Approval Column -->
           <div class="glass-card" style="padding: 1.5rem;">
-            <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem;">Candidate Dispatch & Validation Queue</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+              <h3 style="font-size: 1rem; font-weight: 700; margin: 0;">Candidate Dispatch & Validation Queue</h3>
+              <input type="search" id="step3SearchInput" class="form-input form-input-sm" style="max-width: 280px; width: 100%;" placeholder="🔍 Search dispatch queue by student name...">
+            </div>
             <div class="table-responsive">
               <table class="custom-table" aria-label="Dispatch Queue Table">
                 <thead>
@@ -618,17 +642,76 @@
       </a>
     </footer>
 
+    <!-- Certificate Template Selector Modal -->
+    <div id="templateModal" class="template-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="templateModalTitle">
+      <div class="template-modal-card glass-card">
+        <div class="template-modal-header">
+          <div>
+            <h3 id="templateModalTitle" style="font-size: 1.25rem; font-weight: 700; margin-bottom: 4px;">Choose Certificate Template</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">Select your preferred design, color scheme, and typography layout.</p>
+          </div>
+          <button id="closeTemplateModalBtn" class="btn-close" aria-label="Close modal">&times;</button>
+        </div>
+        <div class="template-grid">
+          <!-- Template 1: IIM Indore Bilingual -->
+          <div class="template-card active" data-template-id="iim-bilingual">
+            <div class="template-card-badge">Official Active</div>
+            <div class="template-thumb thumb-iim">
+              <div class="thumb-inner-border"></div>
+              <div class="thumb-header-text">IIM INDORE</div>
+              <div class="thumb-sub-text">Bilingual Hindi + English</div>
+            </div>
+            <div class="template-card-body">
+              <h4>IIM Indore Bilingual</h4>
+              <p>Official dual Devanagari Hindi & English layout, stepped magenta double borders, candidate photo frame, QR code, and triple signatory approvals.</p>
+            </div>
+          </div>
+
+          <!-- Template 2: Boddhidharma Visionary Tech -->
+          <div class="template-card" data-template-id="bodhidharma-visionary">
+            <div class="template-card-badge badge-visionary">Visionary AI</div>
+            <div class="template-thumb thumb-visionary">
+              <div class="thumb-inner-border"></div>
+              <div class="thumb-header-text">BODDHIDHARMA</div>
+              <div class="thumb-sub-text">Quantum Cyber-Enso</div>
+            </div>
+            <div class="template-card-body">
+              <h4>Boddhidharma Visionary Tech</h4>
+              <p>Cosmic obsidian dark mode with radiant violet/cyan cyber-enso watermark, neural grid accents, modern sans-serif typography, and quantum QR seal.</p>
+            </div>
+          </div>
+
+          <!-- Template 3: Imperial Gold Crest -->
+          <div class="template-card" data-template-id="executive-gold">
+            <div class="template-card-badge badge-gold">Prestige Distinction</div>
+            <div class="template-thumb thumb-gold">
+              <div class="thumb-inner-border"></div>
+              <div class="thumb-header-text">EXECUTIVE CREST</div>
+              <div class="thumb-sub-text">Imperial Gold & Serif</div>
+            </div>
+            <div class="template-card-body">
+              <h4>Imperial Gold Crest</h4>
+              <p>Warm ivory parchment, royal navy & metallic gold ornamental borders, luxury serif typography, and prestigious distinction crest.</p>
+            </div>
+          </div>
+        </div>
+        <div class="template-modal-footer">
+          <button id="cancelTemplateBtn" class="btn btn-secondary">Close</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Global Toast Container -->
     <div id="toastContainer" class="toast-container" aria-live="polite"></div>
   </div>
 
   <!-- Application Modules -->
-  <script src="js/config.js?v=2.4"></script>
-  <script src="js/ui.js?v=2.4"></script>
-  <script src="js/auth.js?v=2.4"></script>
-  <script src="js/excel.js?v=2.4"></script>
-  <script src="js/certificate.js?v=2.4"></script>
-  <script src="js/mailer.js?v=2.4"></script>
+  <script src="js/config.js?v=2.5"></script>
+  <script src="js/ui.js?v=2.5"></script>
+  <script src="js/auth.js?v=2.5"></script>
+  <script src="js/excel.js?v=2.5"></script>
+  <script src="js/certificate.js?v=2.5"></script>
+  <script src="js/mailer.js?v=2.5"></script>
 
   <!-- App Bootstrap Initialization -->
   <script>

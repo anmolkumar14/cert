@@ -598,11 +598,13 @@ const ExcelManager = (function() {
       if (activeFilter === "invalid" && row.status === "valid") return false;
 
       if (searchQuery) {
-        const matchName = row.name.toLowerCase().includes(searchQuery);
-        const matchEmail = row.email.toLowerCase().includes(searchQuery);
-        const matchProg = row.programme.toLowerCase().includes(searchQuery);
-        const matchId = row.certId.toLowerCase().includes(searchQuery);
-        return matchName || matchEmail || matchProg || matchId;
+        const matchName = (row.name || "").toLowerCase().includes(searchQuery);
+        const matchNameHindi = (row.nameHindi || "").toLowerCase().includes(searchQuery);
+        const matchEmail = (row.email || "").toLowerCase().includes(searchQuery);
+        const matchProg = (row.programme || "").toLowerCase().includes(searchQuery);
+        const matchId = (row.certId || "").toLowerCase().includes(searchQuery);
+        const matchRoll = (row.rollNumber || "").toLowerCase().includes(searchQuery);
+        return matchName || matchNameHindi || matchEmail || matchProg || matchId || matchRoll;
       }
 
       return true;
@@ -757,7 +759,7 @@ const ExcelManager = (function() {
           "Email id": "abantika.ray@example.com",
           "Programme Name": "Executive Programme in Digital Transformation & Artificial Intelligence",
           "Duration": "6 Months",
-          "Period": "January 2026 to June 2026",
+          "Period": "March 2026 to September 2026",
           "Photo URL": ""
         },
         {
@@ -767,7 +769,7 @@ const ExcelManager = (function() {
           "Email id": "abhishek.das@example.com",
           "Programme Name": "Executive Programme in Digital Transformation & Artificial Intelligence",
           "Duration": "6 Months",
-          "Period": "January 2026 to June 2026",
+          "Period": "March 2026 to September 2026",
           "Photo URL": ""
         },
         {
@@ -777,7 +779,7 @@ const ExcelManager = (function() {
           "Email id": "ajeet.pandey@example.com",
           "Programme Name": "Executive Programme in Digital Transformation & Artificial Intelligence",
           "Duration": "6 Months",
-          "Period": "January 2026 to June 2026",
+          "Period": "March 2026 to September 2026",
           "Photo URL": ""
         },
         {
@@ -787,7 +789,7 @@ const ExcelManager = (function() {
           "Email id": "akhilesh.shukla@example.com",
           "Programme Name": "Executive Programme in Digital Transformation & Artificial Intelligence",
           "Duration": "6 Months",
-          "Period": "January 2026 to June 2026",
+          "Period": "March 2026 to September 2026",
           "Photo URL": ""
         },
         {
@@ -797,7 +799,7 @@ const ExcelManager = (function() {
           "Email id": "amarnath.p@example.com",
           "Programme Name": "Executive Programme in Digital Transformation & Artificial Intelligence",
           "Duration": "6 Months",
-          "Period": "January 2026 to June 2026",
+          "Period": "March 2026 to September 2026",
           "Photo URL": ""
         }
       ];

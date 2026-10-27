@@ -44,11 +44,34 @@ const CONFIG = {
     defaultDuration: "6 Months",
     defaultDurationHindi: "६ माह",
     
-    defaultPeriod: "January 2026 to June 2026",
-    defaultPeriodHindi: "जनवरी २०२६ से जून २०२६",
+    defaultPeriod: "March 2026 to September 2026",
+    defaultPeriodHindi: "मार्च २०२६ से सितंबर २०२६",
     
     defaultDate: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
     idPrefix: "IIMI-EP-2026-",
+
+    // Certificate Templates
+    activeTemplate: "iim-bilingual",
+    templates: [
+      {
+        id: "iim-bilingual",
+        name: "IIM Indore Bilingual",
+        badge: "Official Executive",
+        tagline: "Hindi + English • Magenta Borders • Official Seals"
+      },
+      {
+        id: "bodhidharma-visionary",
+        name: "Boddhidharma Visionary Tech",
+        badge: "Visionary AI",
+        tagline: "Obsidian Gradient • Cyber-Enso • Neon Violet/Cyan"
+      },
+      {
+        id: "executive-gold",
+        name: "Imperial Gold Crest",
+        badge: "Prestige Distinction",
+        tagline: "Ivory Parchment • Metallic Gold • Regal Typography"
+      }
+    ],
     
     // Signatures as shown on certificate
     signers: [

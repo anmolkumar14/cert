@@ -16,6 +16,7 @@ const MailerManager = (function() {
   // State
   let isSending = false;
   let abortRequested = false;
+  let dispatchSearchQuery = "";
   let dispatchStats = {
     total: 0,
     approved: 0,
@@ -60,6 +61,14 @@ const MailerManager = (function() {
           return;
         }
         UI.goToStep(2);
+      });
+    }
+
+    const step3Search = document.getElementById("step3SearchInput");
+    if (step3Search) {
+      step3Search.addEventListener("input", (e) => {
+        dispatchSearchQuery = (e.target.value || "").trim().toLowerCase();
+        renderDispatchTable();
       });
     }
   }
@@ -124,8 +133,22 @@ const MailerManager = (function() {
     const tbody = document.getElementById("dispatchTableBody");
     if (!tbody) return;
 
-    const rows = ExcelManager.getValidRows();
+    const rows = ExcelManager.getValidRows().filter(row => {
+      if (!dispatchSearchQuery) return true;
+      const matchName = (row.name || "").toLowerCase().includes(dispatchSearchQuery);
+      const matchHindi = (row.nameHindi || "").toLowerCase().includes(dispatchSearchQuery);
+      const matchEmail = (row.email || "").toLowerCase().includes(dispatchSearchQuery);
+      const matchId = (row.certId || "").toLowerCase().includes(dispatchSearchQuery);
+      return matchName || matchHindi || matchEmail || matchId;
+    });
     tbody.innerHTML = "";
+
+    if (rows.length === 0) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">No candidates match "${escapeHtml(dispatchSearchQuery)}".</td>`;
+      tbody.appendChild(tr);
+      return;
+    }
 
     rows.forEach(row => {
       const tr = document.createElement("tr");
