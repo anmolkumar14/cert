@@ -10,7 +10,7 @@
   <link rel="icon" type="image/svg+xml" href="assets/rocket.svg">
 
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css?v=2.1">
+  <link rel="stylesheet" href="css/styles.css?v=2.2">
 
   <!-- Pinned CDN Libraries -->
   <!-- SheetJS (Spreadsheet Parser & Exporter) -->
@@ -226,78 +226,146 @@
       <section id="stepContent2" class="step-content" aria-labelledby="step2Heading">
         <h2 id="step2Heading" class="hidden">Step 2: Certificate Preview & Admin Approval</h2>
 
-        <div class="preview-layout">
-          <!-- Left Sidebar: Candidate Selector & Admin Approval Controls -->
-          <div class="preview-sidebar glass-card">
-            <div>
-              <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.25rem;">Candidate Roster</h3>
-              <p id="previewCandidateCount" style="font-size: 0.8rem; color: var(--text-muted);">0 Approved</p>
+        <!-- Step 2 Top Action & Stats Bar -->
+        <div class="step2-top-bar glass-card">
+          <div>
+            <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.25rem;">Candidate Review & Certificate Validation</h3>
+            <p style="font-size: 0.82rem; color: var(--text-muted);">
+              Preview bilingual certificates, download individual PDFs, and approve candidates for email dispatch.
+            </p>
+          </div>
+
+          <div class="step2-stats-group">
+            <div class="step2-stat-pill">
+              <span style="color: var(--text-muted);">Total Candidates:</span>
+              <strong id="step2TotalCount">0</strong>
+            </div>
+            <div class="step2-stat-pill">
+              <span style="color: #10b981;">Approved:</span>
+              <strong id="step2ApprovedCount" style="color: #10b981;">0</strong>
+            </div>
+            <div class="step2-stat-pill">
+              <span style="color: #f59e0b;">Pending:</span>
+              <strong id="step2PendingCount" style="color: #f59e0b;">0</strong>
+            </div>
+          </div>
+
+          <!-- View Mode Tabs & Quick Actions -->
+          <div class="step2-toolbar">
+            <div class="step2-view-tabs" role="tablist" aria-label="Step 2 View Modes">
+              <button id="viewModeTableBtn" class="step2-view-tab active" title="Interactive Table & Inspector View">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                <span>Table & Preview</span>
+              </button>
+              <button id="viewModeGalleryBtn" class="step2-view-tab" title="View all generated certificates at once">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                <span>All Certificates Gallery</span>
+              </button>
             </div>
 
-            <!-- Bulk Approve All Candidates Button -->
-            <button id="approveAllCandidatesBtn" class="btn btn-secondary btn-sm" style="width: 100%; border-color: rgba(16, 185, 129, 0.4); color: #10b981;">
+            <!-- Bulk Approve All Button -->
+            <button id="approveAllCandidatesBtn" class="btn btn-secondary btn-sm" style="border-color: rgba(16, 185, 129, 0.4); color: #10b981;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
               <span>Approve All Candidates</span>
             </button>
 
-            <!-- Candidate selector list -->
-            <div id="previewCandidateList" class="candidate-selector-list">
-              <!-- Injected by CertificateManager -->
+            <!-- Download All ZIP Button -->
+            <button id="downloadAllZipBtn" class="btn btn-secondary btn-sm">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+              <span>Download All ZIP</span>
+            </button>
+
+            <!-- Proceed to Step 3 Button -->
+            <button id="proceedToStep3Btn" class="btn btn-primary btn-sm">
+              <span>Dispatch Emails &rarr;</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- ================================================================ -->
+        <!-- MODE 1: INTERACTIVE TABLE & LIVE CERTIFICATE INSPECTOR VIEW       -->
+        <!-- ================================================================ -->
+        <div id="step2TableInspectorSection">
+          <!-- Candidates Review & Download Table Card -->
+          <div class="step2-table-card glass-card">
+            <div class="step2-table-header">
+              <div>
+                <h4 style="font-size: 1.05rem; font-weight: 700;">Candidate Roster & Direct PDF Downloads</h4>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
+                  Click the <strong>PDF icon</strong> to download any candidate's certificate, or click <strong>Preview</strong> to inspect their certificate live.
+                </p>
+              </div>
+
+              <!-- Search / Filter Input -->
+              <div class="search-wrap step2-search-input">
+                <input type="text" id="step2CandidateFilter" class="form-input" placeholder="Search candidate name or email...">
+              </div>
             </div>
 
-            <hr style="border: none; border-top: 1px solid var(--border-glass);">
-
-            <!-- Export Buttons -->
-            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-              <button id="downloadSinglePdfBtn" class="btn btn-primary" style="width: 100%;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                <span>Download Current PDF</span>
-              </button>
-
-              <button id="downloadAllZipBtn" class="btn btn-secondary" style="width: 100%;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
-                <span>Download All as ZIP</span>
-              </button>
-            </div>
-
-            <hr style="border: none; border-top: 1px solid var(--border-glass);">
-
-            <!-- Navigation Buttons -->
-            <div style="display: flex; justify-content: space-between; gap: 0.5rem;">
-              <button id="backToStep1Btn" class="btn btn-secondary btn-sm">&larr; Back</button>
-              <button id="proceedToStep3Btn" class="btn btn-primary btn-sm">Dispatch Emails &rarr;</button>
+            <!-- Candidate Roster Table -->
+            <div class="table-responsive">
+              <table class="step2-table custom-table" aria-label="Step 2 Candidate Roster Table">
+                <thead>
+                  <tr>
+                    <th scope="col" style="width: 50px;">#</th>
+                    <th scope="col">Candidate Name (English & Hindi)</th>
+                    <th scope="col">Email Address</th>
+                    <th scope="col">Credential ID</th>
+                    <th scope="col">Approval Status</th>
+                    <th scope="col" style="text-align: center; width: 120px;">Download PDF</th>
+                    <th scope="col" style="text-align: center; width: 110px;">Preview</th>
+                    <th scope="col" style="text-align: right; width: 130px;">Validation</th>
+                  </tr>
+                </thead>
+                <tbody id="step2TableBody">
+                  <!-- Injected by CertificateManager.renderCandidateTable() -->
+                </tbody>
+              </table>
             </div>
           </div>
 
-          <!-- Right Stage: Live IIM Indore Landscape A4 Certificate Preview -->
-          <div class="preview-stage-container">
-            <!-- Admin Preview & Approval Control Bar -->
-            <div class="admin-validation-card glass-card" style="width: 100%; max-width: 900px;">
+          <!-- Live Certificate Inspector Stage -->
+          <div id="certificateInspectorStage" class="cert-inspector-card glass-card">
+            <!-- Inspector Top Nav Bar -->
+            <div class="inspector-nav-bar">
               <div>
-                <div style="font-size: 0.78rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600; letter-spacing: 0.5px;">Candidate Preview</div>
-                <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 2px;">
-                  <span id="approvalCandidateName" style="font-size: 1.15rem; font-weight: 700;">Participant Name</span>
+                <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600; letter-spacing: 0.5px;">Currently Viewing Certificate</div>
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 3px;">
+                  <span id="approvalCandidateName" style="font-size: 1.25rem; font-weight: 700;">Participant Name</span>
                   <div id="currentCandidateApprovalBadge">
                     <span class="approval-badge-pending">Awaiting Validation</span>
                   </div>
                 </div>
               </div>
 
-              <!-- Action buttons for current previewed candidate -->
-              <div style="display: flex; gap: 0.65rem; align-items: center;">
-                <!-- Validate & Approve Button -->
+              <!-- Next / Previous Candidate Stepper Buttons -->
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <button id="prevCandidateBtn" class="btn btn-secondary btn-sm" title="Previous Candidate">
+                  &larr; Prev
+                </button>
+                <span id="candidateIndexIndicator" style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); padding: 0 4px;">1 / 5</span>
+                <button id="nextCandidateBtn" class="btn btn-secondary btn-sm" title="Next Candidate">
+                  Next &rarr;
+                </button>
+              </div>
+
+              <!-- Inspector Actions -->
+              <div style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
                 <button id="approveCurrentCandidateBtn" class="btn btn-approve btn-sm">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-                  <span>Validate & Approve for Emailing</span>
+                  <span>Validate & Approve</span>
                 </button>
 
-                <!-- Revoke Button (hidden by default) -->
                 <button id="revokeApprovalBtn" class="btn btn-outline-danger btn-sm" style="display: none;">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                   <span>Revoke Approval</span>
                 </button>
 
-                <!-- Toggle Watermark Button -->
+                <button id="downloadSinglePdfBtn" class="btn btn-primary btn-sm">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  <span>Download Current PDF</span>
+                </button>
+
                 <button id="toggleWatermarkBtn" class="btn btn-secondary btn-sm" title="Toggle 'SAMPLE' watermark display">
                   Hide Watermark
                 </button>
@@ -404,6 +472,23 @@
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- ================================================================ -->
+        <!-- MODE 2: ALL CERTIFICATES GALLERY (SEE ALL AT ONCE ON THIS SCREEN) -->
+        <!-- ================================================================ -->
+        <div id="step2GallerySection" class="certs-gallery-container hidden">
+          <!-- Dynamically populated by CertificateManager.renderCertificatesGallery() -->
+        </div>
+
+        <!-- Step 2 Bottom Navigation Bar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem;">
+          <button id="backToStep1Btn" class="btn btn-secondary">
+            &larr; Back to Step 1: Upload Roster
+          </button>
+          <button id="proceedToStep3BottomBtn" class="btn btn-primary">
+            Proceed to Step 3: Dispatch Emails &rarr;
+          </button>
         </div>
       </section>
 
@@ -538,12 +623,12 @@
   </div>
 
   <!-- Application Modules -->
-  <script src="js/config.js"></script>
-  <script src="js/ui.js"></script>
-  <script src="js/auth.js"></script>
-  <script src="js/excel.js"></script>
-  <script src="js/certificate.js"></script>
-  <script src="js/mailer.js"></script>
+  <script src="js/config.js?v=2.4"></script>
+  <script src="js/ui.js?v=2.4"></script>
+  <script src="js/auth.js?v=2.4"></script>
+  <script src="js/excel.js?v=2.4"></script>
+  <script src="js/certificate.js?v=2.4"></script>
+  <script src="js/mailer.js?v=2.4"></script>
 
   <!-- App Bootstrap Initialization -->
   <script>

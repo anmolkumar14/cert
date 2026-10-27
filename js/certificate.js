@@ -1,37 +1,50 @@
 /**
  * ============================================================================
- * Certificate Generator Portal - IIM Indore Bilingual Certificate Renderer (certificate.js)
+ * DTAI Launchpad - Certificate Preview, Validation & PDF Engine (certificate.js)
  * ============================================================================
- * Handles:
+ * Created and Developed by ARK Lab
+ * 
+ * Features:
  * - Bilingual Hindi & English official IIM Indore certificate rendering
+ * - Candidate review table with direct PDF download icon and instant preview
+ * - Live Certificate Inspector Stage with smooth candidate navigation
+ * - All Certificates Multi-Gallery mode (see all certificates on one screen)
  * - Dynamic QR Code generation client-side (via QRCode.js)
  * - Candidate photo rendering (with avatar fallback)
- * - Admin Preview & Validation Workflow (Approving individual or all certificates)
+ * - Admin Approval Gating: Only approved candidates may proceed to email dispatch
  * - High-resolution PDF rendering via html2canvas & jsPDF (< 1 MB per PDF)
  * - Single PDF download & Batch ZIP export
- * - Base64 PDF generation for Apps Script email delivery
  */
 
 const CertificateManager = (function() {
-  // State
+  // Internal State
   let activeCandidate = null;
   let isGeneratingZip = false;
   let qrCodeInstance = null;
   let showWatermark = true;
+  let currentViewMode = "table"; // 'table' | 'gallery'
+  let currentFilterQuery = "";
 
   /**
-   * Initialize Step 2 bindings
+   * Initialize Step 2 event bindings
    */
   function init() {
     const downloadSinglePdfBtn = document.getElementById("downloadSinglePdfBtn");
     const downloadAllZipBtn = document.getElementById("downloadAllZipBtn");
     const backToStep1Btn = document.getElementById("backToStep1Btn");
     const proceedToStep3Btn = document.getElementById("proceedToStep3Btn");
+    const proceedToStep3BottomBtn = document.getElementById("proceedToStep3BottomBtn");
     const approveCurrentBtn = document.getElementById("approveCurrentCandidateBtn");
     const revokeApprovalBtn = document.getElementById("revokeApprovalBtn");
     const approveAllBtn = document.getElementById("approveAllCandidatesBtn");
     const toggleWatermarkBtn = document.getElementById("toggleWatermarkBtn");
+    const prevCandidateBtn = document.getElementById("prevCandidateBtn");
+    const nextCandidateBtn = document.getElementById("nextCandidateBtn");
+    const viewModeTableBtn = document.getElementById("viewModeTableBtn");
+    const viewModeGalleryBtn = document.getElementById("viewModeGalleryBtn");
+    const candidateFilterInput = document.getElementById("step2CandidateFilter");
 
+    // Single PDF Download
     if (downloadSinglePdfBtn) {
       downloadSinglePdfBtn.addEventListener("click", () => {
         if (!activeCandidate) {
@@ -42,33 +55,43 @@ const CertificateManager = (function() {
       });
     }
 
+    // Batch ZIP Export
     if (downloadAllZipBtn) {
       downloadAllZipBtn.addEventListener("click", downloadAllCertificatesZip);
     }
 
+    // Navigation back to Step 1
     if (backToStep1Btn) {
       backToStep1Btn.addEventListener("click", () => UI.goToStep(1));
     }
 
-    if (proceedToStep3Btn) {
-      proceedToStep3Btn.addEventListener("click", () => {
-        const approvedCount = ExcelManager.getApprovedRows().length;
-        if (approvedCount === 0) {
-          UI.showToast("Admin Validation Required", "Please validate & approve at least one candidate preview before proceeding to email dispatch.", "warning");
-          return;
-        }
-        UI.goToStep(3);
-      });
-    }
+    // Proceed to Step 3 Handlers
+    const handleProceedToStep3 = () => {
+      const approvedCount = ExcelManager.getApprovedRows().length;
+      if (approvedCount === 0) {
+        UI.showToast(
+          "Admin Validation Required",
+          "Please validate & approve at least one candidate preview before proceeding to email dispatch.",
+          "warning"
+        );
+        return;
+      }
+      UI.goToStep(3);
+    };
+
+    if (proceedToStep3Btn) proceedToStep3Btn.addEventListener("click", handleProceedToStep3);
+    if (proceedToStep3BottomBtn) proceedToStep3BottomBtn.addEventListener("click", handleProceedToStep3);
 
     // Admin Approval Handlers
     if (approveCurrentBtn) {
       approveCurrentBtn.addEventListener("click", () => {
         if (!activeCandidate) return;
         ExcelManager.setAdminApproval(activeCandidate.id, true);
+        activeCandidate.adminApproved = true;
         updateApprovalStateUI(activeCandidate);
-        renderCandidateList(ExcelManager.getValidRows());
-        UI.showToast("Candidate Approved", `Certificate for ${activeCandidate.name} has been validated for email delivery.`, "success");
+        renderCandidateTable(getFilteredCandidates());
+        updateApprovalCount();
+        UI.showToast("Candidate Approved", `Certificate for ${activeCandidate.name} validated for email dispatch.`, "success");
       });
     }
 
@@ -76,8 +99,10 @@ const CertificateManager = (function() {
       revokeApprovalBtn.addEventListener("click", () => {
         if (!activeCandidate) return;
         ExcelManager.setAdminApproval(activeCandidate.id, false);
+        activeCandidate.adminApproved = false;
         updateApprovalStateUI(activeCandidate);
-        renderCandidateList(ExcelManager.getValidRows());
+        renderCandidateTable(getFilteredCandidates());
+        updateApprovalCount();
         UI.showToast("Approval Revoked", `Approval removed for ${activeCandidate.name}.`, "info");
       });
     }
@@ -87,13 +112,21 @@ const CertificateManager = (function() {
         const validRows = ExcelManager.getValidRows();
         if (validRows.length === 0) return;
         ExcelManager.setAllAdminApproval(true);
-        if (activeCandidate) updateApprovalStateUI(activeCandidate);
-        renderCandidateList(validRows);
-        UI.showToast("All Approved", `Validated all ${validRows.length} candidates for dispatch.`, "success");
+        if (activeCandidate) {
+          activeCandidate.adminApproved = true;
+          updateApprovalStateUI(activeCandidate);
+        }
+        renderCandidateTable(getFilteredCandidates());
+        if (currentViewMode === "gallery") {
+          renderCertificatesGallery(getFilteredCandidates());
+        }
+        updateApprovalCount();
+        UI.showToast("All Approved", `Validated all ${validRows.length} candidates for email dispatch.`, "success");
         UI.celebrateConfetti();
       });
     }
 
+    // Watermark Toggle
     if (toggleWatermarkBtn) {
       toggleWatermarkBtn.addEventListener("click", () => {
         showWatermark = !showWatermark;
@@ -104,69 +137,441 @@ const CertificateManager = (function() {
         toggleWatermarkBtn.textContent = showWatermark ? "Hide Watermark" : "Show Watermark";
       });
     }
+
+    // Candidate Stepper Prev / Next
+    if (prevCandidateBtn) {
+      prevCandidateBtn.addEventListener("click", () => navigateCandidate(-1));
+    }
+    if (nextCandidateBtn) {
+      nextCandidateBtn.addEventListener("click", () => navigateCandidate(1));
+    }
+
+    // View Mode Switcher (Table vs Multi-Gallery)
+    if (viewModeTableBtn) {
+      viewModeTableBtn.addEventListener("click", () => setViewMode("table"));
+    }
+    if (viewModeGalleryBtn) {
+      viewModeGalleryBtn.addEventListener("click", () => setViewMode("gallery"));
+    }
+
+    // Candidate Search Filter
+    if (candidateFilterInput) {
+      candidateFilterInput.addEventListener("input", (e) => {
+        currentFilterQuery = (e.target.value || "").trim().toLowerCase();
+        renderCandidateTable(getFilteredCandidates());
+        if (currentViewMode === "gallery") {
+          renderCertificatesGallery(getFilteredCandidates());
+        }
+      });
+    }
+  }
+
+  /**
+   * Filter candidates based on search input
+   */
+  function getFilteredCandidates() {
+    const validRows = ExcelManager.getValidRows();
+    if (!currentFilterQuery) return validRows;
+
+    return validRows.filter(cand => {
+      const name = (cand.name || "").toLowerCase();
+      const nameHindi = (cand.nameHindi || "").toLowerCase();
+      const email = (cand.email || "").toLowerCase();
+      const certId = (cand.certId || "").toLowerCase();
+      const rollNo = (cand.rollNo || "").toLowerCase();
+      return name.includes(currentFilterQuery) ||
+             nameHindi.includes(currentFilterQuery) ||
+             email.includes(currentFilterQuery) ||
+             certId.includes(currentFilterQuery) ||
+             rollNo.includes(currentFilterQuery);
+    });
   }
 
   /**
    * Called whenever user navigates to Step 2
    */
   function onEnterStep() {
-    const validRows = ExcelManager.getValidRows();
+    let validRows = ExcelManager.getValidRows();
     if (validRows.length === 0) {
-      UI.showToast("No Valid Records", "Please upload valid candidate records first.", "warning");
-      UI.goToStep(1);
+      ExcelManager.loadWorkspaceFile("IIMcandidatelist.xlsx");
+      validRows = ExcelManager.getValidRows();
+    }
+
+    if (validRows.length > 0) {
+      if (!activeCandidate || !validRows.some(r => r.id === activeCandidate.id)) {
+        activeCandidate = validRows[0];
+      }
+      renderCandidateTable(getFilteredCandidates());
+      updateCertificatePreview(activeCandidate);
+      updateApprovalStateUI(activeCandidate);
+      updateApprovalCount();
+
+      if (currentViewMode === "gallery") {
+        renderCertificatesGallery(getFilteredCandidates());
+      }
+    }
+  }
+
+  /**
+   * Populate Candidate Review Table with PDF download and preview actions
+   */
+  function renderCandidateTable(candidates) {
+    const tbody = document.getElementById("step2TableBody");
+    if (!tbody) return;
+
+    tbody.innerHTML = "";
+
+    if (candidates.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+            No matching candidates found for "<strong>${escapeHtml(currentFilterQuery)}</strong>".
+          </td>
+        </tr>
+      `;
       return;
     }
 
-    if (!activeCandidate || !validRows.some(r => r.id === activeCandidate.id)) {
-      activeCandidate = validRows[0];
-    }
+    candidates.forEach((cand, index) => {
+      const tr = document.createElement("tr");
+      tr.dataset.candidateId = cand.id;
+      if (activeCandidate && activeCandidate.id === cand.id) {
+        tr.classList.add("active-preview-row");
+      }
 
-    renderCandidateList(validRows);
-    updateCertificatePreview(activeCandidate);
-    updateApprovalStateUI(activeCandidate);
+      const isApproved = cand.adminApproved === true;
+      const approvalBadge = isApproved
+        ? `<span class="approval-badge-approved"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Approved</span>`
+        : `<span class="approval-badge-pending"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Pending</span>`;
+
+      tr.innerHTML = `
+        <td style="font-weight: 600; color: var(--text-muted);">${cand.rollNo || (index + 1)}</td>
+        <td>
+          <div style="font-weight: 700; color: var(--text-primary); font-size: 0.92rem;">${escapeHtml(cand.name)}</div>
+          ${cand.nameHindi ? `<div style="font-size: 0.78rem; color: var(--accent-magenta); font-family: 'Tiro Devanagari Hindi', serif; margin-top: 2px;">${escapeHtml(cand.nameHindi)}</div>` : ""}
+        </td>
+        <td>
+          <div style="font-size: 0.85rem; color: var(--text-secondary);">${escapeHtml(cand.email || "—")}</div>
+          <span style="font-size: 0.68rem; color: #10b981; font-weight: 600;">&#10003; Verified RFC Format</span>
+        </td>
+        <td>
+          <code style="font-size: 0.76rem; color: var(--accent-primary); font-family: monospace;">${escapeHtml(cand.certId)}</code>
+        </td>
+        <td>
+          ${approvalBadge}
+        </td>
+        <td style="text-align: center;">
+          <button class="btn-pdf-row" data-action="download-pdf" data-id="${cand.id}" title="Download PDF certificate for ${escapeHtml(cand.name)}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <span>PDF</span>
+          </button>
+        </td>
+        <td style="text-align: center;">
+          <button class="btn-preview-row" data-action="preview" data-id="${cand.id}" title="Preview certificate below">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span>Preview</span>
+          </button>
+        </td>
+        <td style="text-align: right;">
+          <button class="btn-approve-row ${isApproved ? 'is-approved' : ''}" data-action="toggle-approval" data-id="${cand.id}" title="${isApproved ? 'Click to revoke approval' : 'Click to approve for emailing'}">
+            ${isApproved 
+              ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Approved` 
+              : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Approve`}
+          </button>
+        </td>
+      `;
+
+      // Click on row to preview
+      tr.addEventListener("click", (e) => {
+        const actionBtn = e.target.closest("button");
+        if (actionBtn) {
+          const action = actionBtn.getAttribute("data-action");
+          if (action === "download-pdf") {
+            downloadCandidatePdf(cand.id);
+            return;
+          }
+          if (action === "preview") {
+            selectCandidate(cand.id, true);
+            return;
+          }
+          if (action === "toggle-approval") {
+            toggleCandidateApproval(cand.id);
+            return;
+          }
+        }
+        // If clicking anywhere else on the row, select candidate without forced scroll
+        selectCandidate(cand.id, false);
+      });
+
+      tbody.appendChild(tr);
+    });
+
     updateApprovalCount();
   }
 
   /**
-   * Populate sidebar candidate roster with validation status
+   * Select a candidate, update preview, and optionally scroll to the inspector stage
    */
-  function renderCandidateList(candidates) {
-    const listContainer = document.getElementById("previewCandidateList");
-    if (!listContainer) return;
+  function selectCandidate(candidateId, shouldScroll = false) {
+    const validRows = ExcelManager.getValidRows();
+    const cand = validRows.find(c => c.id === candidateId);
+    if (!cand) return;
 
-    listContainer.innerHTML = "";
+    activeCandidate = cand;
+    updateCertificatePreview(cand);
+    updateApprovalStateUI(cand);
 
-    candidates.forEach((cand) => {
-      const item = document.createElement("div");
-      item.className = "candidate-select-item" + (activeCandidate && activeCandidate.id === cand.id ? " selected" : "");
+    // Update active highlight on table rows
+    const tbody = document.getElementById("step2TableBody");
+    if (tbody) {
+      tbody.querySelectorAll("tr").forEach(tr => {
+        tr.classList.toggle("active-preview-row", tr.dataset.candidateId === candidateId);
+      });
+    }
 
-      const isApproved = cand.adminApproved === true;
-      const approvalIcon = isApproved
-        ? `<span style="color: #10b981; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Approved</span>`
-        : `<span style="color: #f59e0b; font-size: 0.72rem; font-weight: 600;">Pending</span>`;
+    // Scroll to inspector stage if requested
+    if (shouldScroll) {
+      const stage = document.getElementById("certificateInspectorStage");
+      if (stage) {
+        stage.scrollIntoView({ behavior: "smooth", block: "center" });
+        stage.classList.remove("flash-pulse");
+        void stage.offsetWidth;
+        stage.classList.add("flash-pulse");
+      }
+    }
+  }
 
-      item.innerHTML = `
-        <div style="overflow: hidden; max-width: 190px;">
-          <div style="font-weight: 600; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(cand.name)}</div>
-          <div style="font-size: 0.72rem; color: var(--text-muted); font-family: monospace;">${escapeHtml(cand.certId)}</div>
+  /**
+   * Navigate to next or previous candidate
+   */
+  function navigateCandidate(direction) {
+    const validRows = ExcelManager.getValidRows();
+    if (validRows.length === 0) return;
+
+    const currentIndex = validRows.findIndex(c => c.id === (activeCandidate ? activeCandidate.id : ""));
+    let nextIndex = currentIndex + direction;
+
+    if (nextIndex < 0) nextIndex = validRows.length - 1;
+    if (nextIndex >= validRows.length) nextIndex = 0;
+
+    const nextCand = validRows[nextIndex];
+    selectCandidate(nextCand.id, true);
+  }
+
+  /**
+   * Download PDF for a specific candidate ID directly from table row
+   */
+  async function downloadCandidatePdf(candidateId) {
+    const validRows = ExcelManager.getValidRows();
+    const cand = validRows.find(c => c.id === candidateId);
+    if (!cand) return;
+
+    await downloadSinglePdf(cand);
+  }
+
+  /**
+   * Toggle admin approval state for an individual candidate
+   */
+  function toggleCandidateApproval(candidateId) {
+    const validRows = ExcelManager.getValidRows();
+    const cand = validRows.find(c => c.id === candidateId);
+    if (!cand) return;
+
+    const newState = !cand.adminApproved;
+    ExcelManager.setAdminApproval(candidateId, newState);
+    cand.adminApproved = newState;
+
+    if (activeCandidate && activeCandidate.id === candidateId) {
+      activeCandidate.adminApproved = newState;
+      updateApprovalStateUI(cand);
+    }
+
+    renderCandidateTable(getFilteredCandidates());
+    if (currentViewMode === "gallery") {
+      renderCertificatesGallery(getFilteredCandidates());
+    }
+    updateApprovalCount();
+
+    if (newState) {
+      UI.showToast("Candidate Approved", `Certificate for ${cand.name} validated for email dispatch.`, "success");
+    } else {
+      UI.showToast("Approval Revoked", `Approval removed for ${cand.name}.`, "info");
+    }
+  }
+
+  /**
+   * Switch View Mode: Table & Inspector vs All Certificates Gallery
+   */
+  function setViewMode(mode) {
+    currentViewMode = mode;
+    const tableSection = document.getElementById("step2TableInspectorSection");
+    const gallerySection = document.getElementById("step2GallerySection");
+    const tableBtn = document.getElementById("viewModeTableBtn");
+    const galleryBtn = document.getElementById("viewModeGalleryBtn");
+
+    if (mode === "gallery") {
+      if (tableSection) tableSection.classList.add("hidden");
+      if (gallerySection) {
+        gallerySection.classList.remove("hidden");
+        renderCertificatesGallery(getFilteredCandidates());
+      }
+      if (tableBtn) tableBtn.classList.remove("active");
+      if (galleryBtn) galleryBtn.classList.add("active");
+    } else {
+      if (tableSection) tableSection.classList.remove("hidden");
+      if (gallerySection) gallerySection.classList.add("hidden");
+      if (tableBtn) tableBtn.classList.add("active");
+      if (galleryBtn) galleryBtn.classList.remove("active");
+    }
+  }
+
+  /**
+   * Render All Certificates Gallery so the admin can see certificates for ALL candidates loaded in that screen itself
+   */
+  function renderCertificatesGallery(candidates) {
+    const galleryContainer = document.getElementById("step2GallerySection");
+    if (!galleryContainer) return;
+
+    galleryContainer.innerHTML = "";
+
+    if (candidates.length === 0) {
+      galleryContainer.innerHTML = `
+        <div class="glass-card" style="padding: 3rem; text-align: center; color: var(--text-muted); width: 100%;">
+          No candidates available to display in gallery.
         </div>
-        <div>
-          ${approvalIcon}
+      `;
+      return;
+    }
+
+    candidates.forEach((cand, idx) => {
+      const isApproved = cand.adminApproved === true;
+      const card = document.createElement("div");
+      card.className = "gallery-cert-card glass-card";
+
+      card.innerHTML = `
+        <div class="gallery-card-header">
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+              <span style="font-size: 1.15rem; font-weight: 700;">#${cand.rollNo || (idx + 1)}. ${escapeHtml(cand.name)}</span>
+              ${cand.nameHindi ? `<span style="font-size: 0.95rem; color: var(--accent-magenta); font-family: 'Tiro Devanagari Hindi', serif;">(${escapeHtml(cand.nameHindi)})</span>` : ""}
+            </div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
+              Email: <strong>${escapeHtml(cand.email || "—")}</strong> &bull; Credential ID: <code style="color: var(--accent-primary);">${escapeHtml(cand.certId)}</code>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <button class="btn-pdf-row" onclick="CertificateManager.downloadCandidatePdf('${cand.id}')" title="Download PDF">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              <span>Download PDF</span>
+            </button>
+
+            <button class="btn-approve-row ${isApproved ? 'is-approved' : ''}" onclick="CertificateManager.toggleCandidateApproval('${cand.id}')">
+              ${isApproved 
+                ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Validated & Approved` 
+                : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Validate & Approve`}
+            </button>
+          </div>
+        </div>
+
+        <!-- Rendered Certificate Card Frame -->
+        <div class="certificate-frame-wrap" style="transform: scale(0.96); transform-origin: top center;">
+          <div class="certificate-canvas">
+            <div class="cert-iim-border-outer"></div>
+            <div class="cert-iim-border-inner"></div>
+
+            <div class="cert-corner-step cert-corner-step-tl"></div>
+            <div class="cert-corner-step cert-corner-step-tr"></div>
+            <div class="cert-corner-step cert-corner-step-bl"></div>
+            <div class="cert-corner-step cert-corner-step-br"></div>
+
+            <div class="cert-top-header">
+              <div class="cert-header-left">
+                <img src="assets/logo.svg" alt="IIM Indore Logo" class="cert-inst-logo">
+              </div>
+
+              <div class="cert-header-center">
+                <div class="cert-title-hindi">भारतीय प्रबंध संस्थान इंदौर</div>
+                <div class="cert-title-english">INDIAN INSTITUTE OF MANAGEMENT INDORE</div>
+                <div class="cert-header-rule"></div>
+              </div>
+
+              <div class="cert-header-right">
+                <div class="cert-photo-frame" title="Participant Photo">
+                  <img src="assets/avatar.svg" alt="Photo" class="cert-photo-img">
+                </div>
+                <div class="cert-qr-frame" id="gallery_qr_${cand.id}"></div>
+              </div>
+            </div>
+
+            <div class="cert-bilingual-body">
+              <div class="cert-section-hindi">
+                <div>प्रमाणित किया जाता है कि</div>
+                <div class="cert-pname-hindi">${escapeHtml(cand.nameHindi || cand.name)}</div>
+                <div>ने <strong>${escapeHtml(cand.periodHindi || CONFIG.CERTIFICATE.defaultPeriodHindi)}</strong> के दौरान</div>
+                <div>भारतीय प्रबंध संस्थान इंदौर द्वारा आयोजित <strong>${escapeHtml(cand.durationHindi || CONFIG.CERTIFICATE.defaultDurationHindi)}</strong> का ऑनलाइन (एसिंक्रोनस)</div>
+                <div class="cert-prog-hindi">${escapeHtml(cand.programmeHindi || CONFIG.CERTIFICATE.defaultProgrammeHindi)}</div>
+                <div>सफलतापूर्वक पूर्ण किया।</div>
+              </div>
+
+              <div class="cert-section-english">
+                <div>This is to certify that</div>
+                <div class="cert-pname-english">${escapeHtml(cand.name)}</div>
+                <div>has successfully completed the <strong class="cert-highlight">${escapeHtml(cand.duration || CONFIG.CERTIFICATE.defaultDuration)}</strong> online (asynchronous)</div>
+                <div class="cert-prog-english">${escapeHtml(cand.programme || CONFIG.CERTIFICATE.defaultProgramme)}</div>
+                <div>conducted by</div>
+                <div>the Indian Institute of Management Indore</div>
+                <div>during <strong class="cert-highlight">${escapeHtml(cand.period || CONFIG.CERTIFICATE.defaultPeriod)}</strong>.</div>
+              </div>
+            </div>
+
+            <div class="cert-signatures-grid">
+              <div class="cert-sig-item">
+                <div class="cert-sig-script">S. R. Sharma</div>
+                <div class="cert-sig-divider"></div>
+                <div class="cert-sig-hindi">कार्यक्रम समन्वयक</div>
+                <div class="cert-sig-english">Programme Coordinator</div>
+              </div>
+              <div class="cert-sig-item">
+                <div class="cert-sig-script">Ananya Gupta</div>
+                <div class="cert-sig-divider"></div>
+                <div class="cert-sig-hindi">अध्यक्ष, कार्यपालक शिक्षा</div>
+                <div class="cert-sig-english">Chairperson, Executive Education</div>
+              </div>
+              <div class="cert-sig-item">
+                <div class="cert-sig-script">Himanshu Rai</div>
+                <div class="cert-sig-divider"></div>
+                <div class="cert-sig-hindi">निदेशक, भा. प्र. सं. इंदौर</div>
+                <div class="cert-sig-english">Director, IIM Indore</div>
+              </div>
+            </div>
+
+            <div class="cert-bottom-bar">
+              <span>Executive Education Office, IIM Indore</span>
+              <span>Credential ID: <strong style="font-family: monospace;">${escapeHtml(cand.certId)}</strong></span>
+            </div>
+          </div>
         </div>
       `;
 
-      item.addEventListener("click", () => {
-        activeCandidate = cand;
-        listContainer.querySelectorAll(".candidate-select-item").forEach(el => el.classList.remove("selected"));
-        item.classList.add("selected");
-        updateCertificatePreview(cand);
-        updateApprovalStateUI(cand);
-      });
+      galleryContainer.appendChild(card);
 
-      listContainer.appendChild(item);
+      // Render individual QR code
+      setTimeout(() => {
+        const qrEl = document.getElementById(`gallery_qr_${cand.id}`);
+        if (qrEl && typeof QRCode === "function") {
+          const verifyUrl = `${CONFIG.ORGANIZATION.verifyUrlBase}${encodeURIComponent(cand.certId)}`;
+          new QRCode(qrEl, {
+            text: verifyUrl,
+            width: 60,
+            height: 60,
+            colorDark: "#1e293b",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.M
+          });
+        }
+      }, 20);
     });
-
-    updateApprovalCount();
   }
 
   /**
@@ -179,9 +584,10 @@ const CertificateManager = (function() {
     const approveBtn = document.getElementById("approveCurrentCandidateBtn");
     const revokeBtn = document.getElementById("revokeApprovalBtn");
     const candidateNameLabel = document.getElementById("approvalCandidateName");
+    const indexIndicator = document.getElementById("candidateIndexIndicator");
 
     if (candidateNameLabel) {
-      candidateNameLabel.textContent = candidate.name;
+      candidateNameLabel.textContent = `${candidate.name}${candidate.nameHindi ? ` (${candidate.nameHindi})` : ''}`;
     }
 
     const isApproved = candidate.adminApproved === true;
@@ -199,25 +605,37 @@ const CertificateManager = (function() {
       revokeBtn.style.display = isApproved ? "inline-flex" : "none";
     }
 
+    // Update index indicator (e.g. 1 / 5)
+    const validRows = ExcelManager.getValidRows();
+    const currIdx = validRows.findIndex(c => c.id === candidate.id);
+    if (indexIndicator && currIdx !== -1) {
+      indexIndicator.textContent = `${currIdx + 1} / ${validRows.length}`;
+    }
+
     // Step 3 Proceed button status
     const proceedToStep3Btn = document.getElementById("proceedToStep3Btn");
+    const proceedToStep3BottomBtn = document.getElementById("proceedToStep3BottomBtn");
     const approvedCount = ExcelManager.getApprovedRows().length;
-    if (proceedToStep3Btn) {
-      proceedToStep3Btn.textContent = `Dispatch Emails (${approvedCount} Approved) \u2192`;
-    }
+    const buttonText = `Dispatch Emails (${approvedCount} Approved) \u2192`;
+    if (proceedToStep3Btn) proceedToStep3Btn.textContent = buttonText;
+    if (proceedToStep3BottomBtn) proceedToStep3BottomBtn.textContent = buttonText;
   }
 
   /**
-   * Update top summary counts in sidebar
+   * Update top summary counts in bar
    */
   function updateApprovalCount() {
     const validCount = ExcelManager.getValidRows().length;
     const approvedCount = ExcelManager.getApprovedRows().length;
-    const countBadge = document.getElementById("previewCandidateCount");
+    const pendingCount = validCount - approvedCount;
 
-    if (countBadge) {
-      countBadge.innerHTML = `<strong>${approvedCount}</strong> of <strong>${validCount}</strong> Approved`;
-    }
+    const totalEl = document.getElementById("step2TotalCount");
+    const approvedEl = document.getElementById("step2ApprovedCount");
+    const pendingEl = document.getElementById("step2PendingCount");
+
+    if (totalEl) totalEl.textContent = validCount;
+    if (approvedEl) approvedEl.textContent = approvedCount;
+    if (pendingEl) pendingEl.textContent = pendingCount;
   }
 
   /**
@@ -258,75 +676,76 @@ const CertificateManager = (function() {
     if (pNameEngEl) {
       const len = (candidate.name || "").length;
       if (len > 30) {
-        pNameEngEl.style.fontSize = "1.15rem";
-      } else if (len > 22) {
         pNameEngEl.style.fontSize = "1.3rem";
+      } else if (len > 24) {
+        pNameEngEl.style.fontSize = "1.5rem";
       } else {
-        pNameEngEl.style.fontSize = "1.48rem";
+        pNameEngEl.style.fontSize = "1.85rem";
       }
     }
 
-    // Candidate Photo
-    if (photoImgEl) {
-      photoImgEl.src = candidate.photoUrl || "assets/avatar.svg";
-      photoImgEl.onerror = () => {
-        photoImgEl.src = "assets/avatar.svg";
-      };
+    if (pNameHindiEl) {
+      const lenH = (candidate.nameHindi || "").length;
+      if (lenH > 30) {
+        pNameHindiEl.style.fontSize = "1.15rem";
+      } else {
+        pNameHindiEl.style.fontSize = "1.45rem";
+      }
     }
 
-    // Generate Dynamic QR Code
-    generateCertificateQr(candidate.certId);
+    // Photo placeholder
+    if (photoImgEl) {
+      photoImgEl.src = candidate.photoUrl || "assets/avatar.svg";
+    }
+
+    // Generate Verification QR Code via QRCode.js
+    generateQrCode(candidate.certId);
   }
 
   /**
-   * Generate QR Code into #certQrCode element
+   * Dynamic QR Code Generation
    */
-  function generateCertificateQr(certId) {
+  function generateQrCode(certId) {
     const qrContainer = document.getElementById("certQrCode");
     if (!qrContainer) return;
 
     qrContainer.innerHTML = "";
-    const verifyUrl = `${CONFIG.ORGANIZATION.verifyUrlBase}${encodeURIComponent(certId)}`;
 
-    if (typeof QRCode !== "undefined") {
-      try {
+    const verifyUrl = `${CONFIG.ORGANIZATION.verifyUrlBase}${encodeURIComponent(certId || "IIMI-EP-2026-0001")}`;
+
+    try {
+      if (typeof QRCode !== "undefined") {
         qrCodeInstance = new QRCode(qrContainer, {
           text: verifyUrl,
-          width: 64,
-          height: 64,
-          colorDark: "#0f172a",
+          width: 72,
+          height: 72,
+          colorDark: "#1e293b",
           colorLight: "#ffffff",
           correctLevel: QRCode.CorrectLevel.M
         });
-      } catch (err) {
-        console.warn("QRCode generation error:", err);
+      } else {
+        qrContainer.innerHTML = `
+          <div style="font-size: 8px; font-family: monospace; text-align: center; color: #64748b; padding-top: 10px;">
+            [QR VERIFY]<br>${escapeHtml(certId)}
+          </div>
+        `;
       }
-    } else {
-      // Fallback clean QR graphic if CDN offline
-      const img = document.createElement("img");
-      img.src = `https://api.qrserver.com/v1/create-qr-code/?size=64x64&data=${encodeURIComponent(verifyUrl)}`;
-      img.alt = "Verification QR Code";
-      img.style.width = "100%";
-      img.style.height = "100%";
-      qrContainer.appendChild(img);
+    } catch (err) {
+      console.warn("QR code generation fallback:", err);
+      qrContainer.innerHTML = `<span style="font-size: 8px;">QR</span>`;
     }
   }
 
   /**
-   * Render certificate DOM node into high-resolution canvas via html2canvas
+   * Render certificate DOM node into an HTML5 Canvas using html2canvas
    */
   async function renderCertCanvas() {
     const certElement = document.getElementById("certificateCanvas");
-    if (!certElement) {
-      throw new Error("Certificate element #certificateCanvas not found in DOM.");
-    }
+    if (!certElement) throw new Error("Certificate DOM element not found");
 
-    if (document.fonts) {
+    if (document.fonts && document.fonts.ready) {
       await document.fonts.ready;
     }
-
-    // Wait a brief tick for QR image/canvas to settle
-    await new Promise(resolve => setTimeout(resolve, 80));
 
     const canvas = await html2canvas(certElement, {
       scale: 2.2, // ~300 DPI print quality
@@ -352,7 +771,6 @@ const CertificateManager = (function() {
       compress: true
     });
 
-    // Clean JPEG compression under 600KB
     const imgData = canvas.toDataURL("image/jpeg", 0.92);
     pdf.addImage(imgData, "JPEG", 0, 0, 297, 210, undefined, "FAST");
     return pdf;
@@ -448,24 +866,22 @@ const CertificateManager = (function() {
         certFolder.file(filename, pdfArrayBuffer);
       }
 
-      if (btn) {
-        btn.innerHTML = `<span class="spinner"></span> Compressing ZIP...`;
-      }
+      if (btn) btn.innerHTML = `<span class="spinner"></span> Compressing ZIP...`;
 
-      const zipBlob = await zip.generateAsync({
+      const zipContent = await zip.generateAsync({
         type: "blob",
         compression: "DEFLATE",
         compressionOptions: { level: 6 }
       });
 
-      const downloadUrl = URL.createObjectURL(zipBlob);
-      const a = document.createElement("a");
-      a.href = downloadUrl;
-      a.download = `IIM_Indore_Certificates_${new Date().toISOString().slice(0, 10)}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(downloadUrl);
+      const zipFilename = `IIM_Indore_Certificates_${new Date().toISOString().slice(0, 10)}.zip`;
+      const downloadLink = document.createElement("a");
+      downloadLink.href = URL.createObjectURL(zipContent);
+      downloadLink.download = zipFilename;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      URL.revokeObjectURL(downloadLink.href);
 
       UI.showToast("Batch Export Complete", `Downloaded ${validRows.length} certificates in ZIP.`, "success");
       UI.celebrateConfetti();
@@ -501,6 +917,11 @@ const CertificateManager = (function() {
     updateApprovalStateUI,
     updateApprovalCount,
     downloadSinglePdf,
+    downloadCandidatePdf,
+    toggleCandidateApproval,
+    selectCandidate,
+    renderCandidateTable,
+    setViewMode,
     downloadAllCertificatesZip,
     generatePdfBase64
   };
