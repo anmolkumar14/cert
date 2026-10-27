@@ -2,7 +2,7 @@
  * ============================================================================
  * DTAI Launchpad - Certificate Preview, Validation & PDF Engine (certificate.js)
  * ============================================================================
- * Created and Developed by ARK Lab
+ * Created and Developed by Bodhidharma Lab
  * 
  * Features:
  * - Bilingual Hindi & English official IIM Indore certificate rendering

@@ -15,14 +15,14 @@ const CONFIG = {
     name: "DTAI Launchpad",
     subtitle: "Executive Certificate & Dispatch Suite",
     icon: "assets/rocket.svg",
-    developedBy: "ARK Lab",
-    developerLogo: "assets/ark-logo.svg"
+    developedBy: "Bodhidharma Lab",
+    developerLogo: "assets/bodhidharma-logo.svg"
   },
 
   // Organization Information (Matching IIM Indore Reference Certificate)
   ORGANIZATION: {
     portalName: "DTAI Launchpad",
-    developedBy: "ARK Lab",
+    developedBy: "Bodhidharma Lab",
     hindiName: "भारतीय प्रबंध संस्थान इंदौर",
     englishName: "INDIAN INSTITUTE OF MANAGEMENT INDORE",
     shortName: "IIM Indore",

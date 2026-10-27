@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 64" width="320" height="64" fill="none">
+  <defs>
+    <!-- Visionary Radiant Gradients -->
+    <!-- 1. Cosmic Awakening: Indigo -> Electric Violet -> Vibrant Magenta -->
+    <linearGradient id="bodhiCosmic" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="35%" stop-color="#6366f1" />
+      <stop offset="70%" stop-color="#8b5cf6" />
+      <stop offset="100%" stop-color="#d946ef" />
+    </linearGradient>
+
+    <!-- 2. Quantum Vision: Deep Sapphire -> Cyan -> Emerald Aqua -->
+    <linearGradient id="bodhiVision" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1e1b4b" />
+      <stop offset="40%" stop-color="#4f46e5" />
+      <stop offset="80%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#22d3ee" />
+    </linearGradient>
+
+    <!-- 3. Enlightened Pupil Core: Radiant Central Glow -->
+    <radialGradient id="bodhiPupilGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="35%" stop-color="#67e8f9" />
+      <stop offset="70%" stop-color="#818cf8" />
+      <stop offset="100%" stop-color="#4338ca" />
+    </radialGradient>
+
+    <!-- 4. Text Gradient for Accent -->
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="50%" stop-color="#8b5cf6" />
+      <stop offset="100%" stop-color="#06b6d4" />
+    </linearGradient>
+
+    <!-- Visionary Glow Filter -->
+    <filter id="visionaryGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="1.8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <!-- Drop Shadow Filter for Badge Floating Effect -->
+    <filter id="iconShadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#4f46e5" flood-opacity="0.3" />
+    </filter>
+  </defs>
+
+  <!-- ===================================================================== -->
+  <!-- VISIONARY EMBLEM (The Awakened Third Eye & Cyber-Enso)                 -->
+  <!-- ===================================================================== -->
+  <g id="bodhidharmaEmblem" transform="translate(4, 4)" filter="url(#iconShadow)">
+    <!-- Outer Dynamic Orbital Enso Ring (The Circle of Awakening) -->
+    <ellipse cx="28" cy="28" rx="26" ry="26" 
+             stroke="url(#bodhiCosmic)" stroke-width="2.2" stroke-linecap="round"
+             stroke-dasharray="145 18" stroke-dashoffset="12" fill="none" opacity="0.85" />
+    
+    <!-- Secondary Quantum Trajectory Ring -->
+    <ellipse cx="28" cy="28" rx="23" ry="17" transform="rotate(-28 28 28)"
+             stroke="url(#bodhiVision)" stroke-width="1.4" stroke-dasharray="65 14" fill="none" opacity="0.7" />
+
+    <!-- Orbital Energy Satellites / Nodes -->
+    <circle cx="51" cy="18" r="2.2" fill="#22d3ee" filter="url(#visionaryGlow)" />
+    <circle cx="6" cy="38" r="1.6" fill="#c084fc" />
+    <circle cx="34" cy="4" r="1.8" fill="#818cf8" />
+
+    <!-- Visionary Eye Outer Shell (Sleek Geometric Aperture) -->
+    <path d="M 10 28 C 17 18, 39 18, 46 28 C 39 38, 17 38, 10 28 Z" 
+          fill="url(#bodhiVision)" opacity="0.18" />
+    <path d="M 10 28 C 17 18, 39 18, 46 28" 
+          stroke="url(#bodhiCosmic)" stroke-width="2.4" stroke-linecap="round" fill="none" />
+    <path d="M 10 28 C 17 38, 39 38, 46 28" 
+          stroke="url(#bodhiVision)" stroke-width="2.4" stroke-linecap="round" fill="none" />
+
+    <!-- Iris: Radiant Cosmic Core -->
+    <circle cx="28" cy="28" r="8.5" fill="url(#bodhiPupilGlow)" filter="url(#visionaryGlow)" />
+    <circle cx="28" cy="28" r="8.5" stroke="#ffffff" stroke-width="0.8" fill="none" opacity="0.6" />
+
+    <!-- Enlightened Center: 4-Point Visionary Star of Awareness -->
+    <path d="M 28 22 Q 28 28 34 28 Q 28 28 28 34 Q 28 28 22 28 Q 28 28 28 22 Z" 
+          fill="#ffffff" />
+    <circle cx="28" cy="28" r="1.4" fill="#0f172a" />
+  </g>
+
+  <!-- ===================================================================== -->
+  <!-- BODHIDHARMA LAB TYPOGRAPHY                                            -->
+  <!-- ===================================================================== -->
+  <g id="typographyGroup" transform="translate(68, 6)">
+    <!-- Main Logotype: "BODHIDHARMA" -->
+    <text x="0" y="27" 
+          font-family="'Inter', 'Space Grotesk', 'Outfit', -apple-system, sans-serif" 
+          font-size="20" 
+          letter-spacing="0.8px">
+      <tspan fill="#0f172a" font-weight="900">BODHI</tspan>
+      <tspan fill="url(#accentGradient)" font-weight="800">DHARMA</tspan>
+    </text>
+
+    <!-- Lab Pill Badge -->
+    <g transform="translate(182, 10)">
+      <rect x="0" y="0" width="54" height="20" rx="10" 
+            fill="url(#accentGradient)" />
+      <rect x="0.7" y="0.7" width="52.6" height="18.6" rx="9.3" 
+            fill="#0f172a" />
+      <text x="27" y="14" 
+            font-family="'Inter', 'Space Grotesk', sans-serif" 
+            font-weight="800" 
+            font-size="10.5" 
+            letter-spacing="2.5px" 
+            fill="#ffffff" 
+            text-anchor="middle">LAB</text>
+    </g>
+
+    <!-- Visionary Subtitle: Advanced Research & Intelligence -->
+    <text x="1" y="44" 
+          font-family="'Inter', 'Space Grotesk', -apple-system, sans-serif" 
+          font-weight="700" 
+          font-size="8" 
+          letter-spacing="2.8px" 
+          fill="#64748b">VISIONARY RESEARCH LAB</text>
+
+    <!-- Decorative Micro Accents -->
+    <circle cx="178" cy="41.5" r="1.5" fill="#06b6d4" />
+    <line x1="184" y1="41.5" x2="236" y2="41.5" stroke="url(#accentGradient)" stroke-width="1.2" stroke-linecap="round" opacity="0.75" />
+  </g>
+</svg>

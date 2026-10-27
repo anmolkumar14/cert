@@ -1862,7 +1862,8 @@ html, body {
   letter-spacing: 0.08em;
 }
 
-/* ARK Lab Attribution Bar (Adani Aesthetic: clean curves, corporate tri-color) */
+/* Bodhidharma Lab Visionary Attribution Bar */
+.bodhidharma-footer-attribution,
 .ark-footer-attribution {
   margin-top: auto;
   padding: 1.25rem 1.75rem;
@@ -1880,34 +1881,46 @@ html, body {
   z-index: 10;
 }
 
+.bodhidharma-footer-badge,
 .ark-footer-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.65rem;
   background: #ffffff;
-  padding: 0.35rem 0.95rem;
+  padding: 0.4rem 1.1rem;
   border-radius: var(--radius-full);
-  border: 1px solid rgba(0, 119, 200, 0.22);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.28);
+  box-shadow: 0 3px 14px rgba(79, 70, 229, 0.12);
   transition: all var(--transition-fast);
   text-decoration: none;
 }
 
+[data-theme="dark"] .bodhidharma-footer-badge,
 [data-theme="dark"] .ark-footer-badge {
   background: #ffffff;
-  border-color: rgba(255, 255, 255, 0.4);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  border-color: rgba(168, 85, 247, 0.45);
+  box-shadow: 0 4px 18px rgba(99, 102, 241, 0.35);
 }
 
+.bodhidharma-footer-badge:hover,
 .ark-footer-badge:hover {
   transform: translateY(-2px);
-  border-color: #0077c8;
-  box-shadow: 0 6px 20px rgba(0, 119, 200, 0.3);
+  border-color: #8b5cf6;
+  box-shadow: 0 6px 24px rgba(139, 92, 246, 0.38);
 }
 
+.bodhidharma-logo-img,
 .ark-logo-img {
-  height: 32px;
+  height: 34px;
   width: auto;
   display: block;
 }
+
+.bodhidharma-icon-inline {
+  height: 20px;
+  width: 20px;
+  vertical-align: middle;
+  display: inline-block;
+}
+
 

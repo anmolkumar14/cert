@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none">
+  <defs>
+    <!-- Visionary Radiant Gradients -->
+    <linearGradient id="bodhiIconCosmic" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="35%" stop-color="#6366f1" />
+      <stop offset="70%" stop-color="#8b5cf6" />
+      <stop offset="100%" stop-color="#d946ef" />
+    </linearGradient>
+
+    <linearGradient id="bodhiIconVision" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1e1b4b" />
+      <stop offset="40%" stop-color="#4f46e5" />
+      <stop offset="80%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#22d3ee" />
+    </linearGradient>
+
+    <radialGradient id="bodhiIconPupil" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="35%" stop-color="#67e8f9" />
+      <stop offset="70%" stop-color="#818cf8" />
+      <stop offset="100%" stop-color="#4338ca" />
+    </radialGradient>
+
+    <filter id="bodhiIconGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="1.5" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Visionary Outer Dynamic Orbital Enso Ring -->
+  <ellipse cx="32" cy="32" rx="28" ry="28" 
+           stroke="url(#bodhiIconCosmic)" stroke-width="2.6" stroke-linecap="round"
+           stroke-dasharray="155 20" stroke-dashoffset="14" fill="none" opacity="0.9" />
+  
+  <!-- Secondary Quantum Trajectory Ring -->
+  <ellipse cx="32" cy="32" rx="25" ry="18" transform="rotate(-28 32 32)"
+           stroke="url(#bodhiIconVision)" stroke-width="1.6" stroke-dasharray="70 16" fill="none" opacity="0.75" />
+
+  <!-- Orbital Energy Satellites / Nodes -->
+  <circle cx="56" cy="20" r="2.5" fill="#22d3ee" filter="url(#bodhiIconGlow)" />
+  <circle cx="8" cy="42" r="1.8" fill="#c084fc" />
+  <circle cx="38" cy="5" r="2" fill="#818cf8" />
+
+  <!-- Visionary Eye Outer Shell (Sleek Geometric Aperture) -->
+  <path d="M 12 32 C 20 20, 44 20, 52 32 C 44 44, 20 44, 12 32 Z" 
+        fill="url(#bodhiIconVision)" opacity="0.22" />
+  <path d="M 12 32 C 20 20, 44 20, 52 32" 
+        stroke="url(#bodhiIconCosmic)" stroke-width="2.8" stroke-linecap="round" fill="none" />
+  <path d="M 12 32 C 20 44, 44 44, 52 32" 
+        stroke="url(#bodhiIconVision)" stroke-width="2.8" stroke-linecap="round" fill="none" />
+
+  <!-- Iris: Radiant Cosmic Core -->
+  <circle cx="32" cy="32" r="10" fill="url(#bodhiIconPupil)" filter="url(#bodhiIconGlow)" />
+  <circle cx="32" cy="32" r="10" stroke="#ffffff" stroke-width="0.9" fill="none" opacity="0.65" />
+
+  <!-- Enlightened Center: 4-Point Visionary Star of Awareness -->
+  <path d="M 32 25 Q 32 32 39 32 Q 32 32 32 39 Q 32 32 25 32 Q 32 32 32 25 Z" 
+        fill="#ffffff" />
+  <circle cx="32" cy="32" r="1.6" fill="#0f172a" />
+</svg>

@@ -1,6 +1,6 @@
 # 🚀 DTAI Launchpad
 ### Executive Certificate Generator & Dispatch Suite
-> **Created and Developed by ARK Lab** &bull; Featuring Adani-styled corporate visual identity
+> **Created and Developed by Bodhidharma Lab** &bull; Visionary AI & Intelligence Research Lab
 
 A lightweight, high-performance, serverless **Certificate Generator & Email Dispatch Portal** engineered with plain HTML5, CSS3, and vanilla JavaScript (no build tools, zero dependencies, framework-free). 
 
@@ -14,7 +14,7 @@ Designed to be hosted as a 100% static site on **GitHub Pages**, **Netlify**, or
 ┌────────────────────────────────────────────────────────┐
 │             Static Frontend (GitHub Pages)             │
 │  • Modern Glassmorphic UI (Dark / Light Themes)        │
-│  • DTAI Launchpad 🚀 Branding & ARK Lab Attribution    │
+│  • DTAI Launchpad 🚀 Branding & Bodhidharma Lab Brand   │
 │  • RFC 5322 Strict Email Validation & Roster Parsing   │
 │  • IIM Indore Official Bilingual A4 Landscape Format   │
 │  • Admin Approval Gating: Preview & Validate First     │
@@ -32,7 +32,7 @@ Designed to be hosted as a 100% static site on **GitHub Pages**, **Netlify**, or
 ```
 
 - **DTAI Launchpad Branding**: Modern rocket sign (🚀) brandmark with multi-toned aerospace gradient.
-- **Created & Developed by ARK Lab**: Prominently attributed across all pages with an Adani-style corporate logo mark (tricolor gradient flow arc across modern geometric letterforms).
+- **Created & Developed by Bodhidharma Lab**: Prominently attributed across all pages with a visionary emblem (Awakened Third Eye & Cyber-Enso orbital rings in radiant cosmic indigo, violet, and cyan gradients).
 - **Zero-Build Architecture**: Deploy directly from Git without Node, Vite, or Webpack.
 - **Official IIM Indore Bilingual Template**: Dual Hindi and English typography, double-stepped magenta executive borders, candidate photo placeholder, dynamic verification QR code, and triple signatory stamps.
 - **Strict RFC 5322 Email Validation**: Automatically parses candidate spreadsheets, highlights invalid email patterns, and flags duplicates.
@@ -59,7 +59,8 @@ Designed to be hosted as a 100% static site on **GitHub Pages**, **Netlify**, or
 │   └── mailer.js         # Gated dispatch queue (approved rows only), retries, audit report
 ├── assets/
 │   ├── rocket.svg        # DTAI Launchpad aerodynamic rocket brandmark
-│   ├── ark-logo.svg      # ARK Lab logo in Adani-styled corporate gradient
+│   ├── bodhidharma-logo.svg # Bodhidharma Lab visionary emblem & wordmark
+│   ├── bodhidharma-icon.svg # Bodhidharma standalone visionary icon
 │   ├── avatar.svg        # Candidate executive silhouette portrait
 │   └── logo.svg          # IIM Indore official circular emblem & EQUIS crest
 ├── IIMcandidatelist.xlsx # Sample candidate roster with Hindi & English names
