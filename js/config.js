@@ -16,7 +16,7 @@ const CONFIG = {
     subtitle: "Executive Certificate & Dispatch Suite",
     icon: "assets/rocket.svg",
     developedBy: "Bodhidharma Lab",
-    developerLogo: "assets/bodhidharma-logo.svg"
+    developerLogo: "assets/bodhidharma-logo.svg?v=future"
   },
 
   // Organization Information (Matching IIM Indore Reference Certificate)
