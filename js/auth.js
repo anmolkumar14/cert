@@ -203,3 +203,5 @@ const Auth = (function() {
     guardRoute
   };
 })();
+
+if (typeof window !== "undefined") { window.Auth = Auth; }

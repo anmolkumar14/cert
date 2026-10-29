@@ -230,3 +230,5 @@ document.addEventListener("DOMContentLoaded", () => {
   UI.initTheme();
   UI.initRipples();
 });
+
+if (typeof window !== "undefined") { window.UI = UI; }

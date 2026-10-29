@@ -1212,30 +1212,344 @@ html, body {
 /* ==========================================================================
    Certificate Template (IIM Indore Official Landscape A4 Layout)
    ========================================================================== */
-.certificate-frame-wrap {
+/* Certificate Scalable Viewport & Responsive Viewer Stage */
+.cert-viewer-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+  padding: 0.65rem 0.95rem;
+  background: var(--bg-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-glass);
+}
+
+.cert-zoom-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.cert-zoom-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cert-zoom-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  min-width: 80px;
+  text-align: center;
+  color: var(--accent-primary);
+  background: rgba(99, 102, 241, 0.1);
+  padding: 0.35rem 0.6rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.cert-viewer-quick-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* The Responsive Scrollable Viewport Stage */
+.cert-viewport-stage {
   width: 100%;
-  max-width: 900px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 1.25rem 0.5rem;
+  box-sizing: border-box;
+  touch-action: pan-x pan-y pinch-zoom;
+  background: rgba(15, 23, 42, 0.45);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-glass);
+  min-height: 260px;
+}
+
+/* Scaler container for mathematical aspect ratio preservation */
+.cert-scaler-outer {
+  position: relative;
+  flex-shrink: 0;
+  margin: 0 auto;
+  transition: width 0.12s ease, height 0.12s ease;
+}
+
+.cert-scaler-inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 860px;
+  height: 608px;
+  transform-origin: top left;
+  transition: transform 0.12s ease;
+}
+
+/* Fixed Canonical Printable Landscape Frame (860 x 608 = ISO A4 Ratio 1.414) */
+.certificate-frame-wrap {
+  width: 860px;
+  height: 608px;
+  max-width: none;
+  min-width: 0;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.15);
   border-radius: 4px;
   overflow: hidden;
   background: #ffffff;
+  flex-shrink: 0;
+  margin: 0 auto;
 }
 
 /* Printable Certificate Canvas (Standard A4 Landscape) */
 .certificate-canvas {
-  width: 100%;
+  width: 860px;
+  height: 608px;
   aspect-ratio: 1.414 / 1;
   background: #ffffff;
   color: #1e293b;
   position: relative;
   box-sizing: border-box;
-  padding: 32px 36px 28px;
+  padding: 30px 34px 26px;
   user-select: none;
   font-family: 'Inter', sans-serif;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* Gallery Card Scaler */
+.cert-gallery-stage {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 0.85rem 0.25rem;
+  box-sizing: border-box;
+  background: rgba(15, 23, 42, 0.35);
+  border-radius: var(--radius-md);
+  margin-top: 0.75rem;
+}
+
+.cert-gallery-scaler-outer {
+  position: relative;
+  flex-shrink: 0;
+  margin: 0 auto;
+}
+
+.cert-gallery-scaler-inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 860px;
+  height: 608px;
+  transform-origin: top left;
+}
+
+.gallery-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Table Row Action Buttons */
+.btn-view-pdf-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.38rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  background: rgba(6, 182, 212, 0.12);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(6, 182, 212, 0.32);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.btn-view-pdf-row:hover {
+  background: rgba(6, 182, 212, 0.22);
+  border-color: var(--accent-cyan);
+  transform: translateY(-1px);
+}
+
+.btn-pdf-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.38rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--accent-primary);
+  border: 1px solid rgba(99, 102, 241, 0.32);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.btn-pdf-row:hover {
+  background: rgba(99, 102, 241, 0.22);
+  border-color: var(--accent-primary);
+  transform: translateY(-1px);
+}
+
+.btn-preview-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.38rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-glass);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.btn-preview-row:hover {
+  color: var(--text-primary);
+  border-color: var(--border-focus);
+  transform: translateY(-1px);
+}
+
+.btn-approve-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.38rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border-radius: var(--radius-full);
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--text-secondary);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.btn-approve-row:hover {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.btn-approve-row.is-approved {
+  background: rgba(16, 185, 129, 0.18);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+/* Dedicated Certificate PDF Viewer Modal Styles */
+.pdf-modal-card {
+  width: 95%;
+  max-width: 960px;
+  max-height: 94vh;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.pdf-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.pdf-modal-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.pdf-modal-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.65rem 0.85rem;
+  background: var(--bg-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-glass);
+}
+
+.pdf-modal-zoom-group,
+.pdf-modal-actions-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pdf-modal-viewport {
+  flex: 1;
+  width: 100%;
+  max-height: 68vh;
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 1rem 0.5rem;
+  background: rgba(15, 23, 42, 0.45);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-glass);
+  box-sizing: border-box;
+  touch-action: pan-x pan-y pinch-zoom;
+}
+
+.modal-scaler-outer {
+  position: relative;
+  flex-shrink: 0;
+  margin: 0 auto;
+  transition: width 0.12s ease, height 0.12s ease;
+}
+
+.modal-scaler-inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 860px;
+  height: 608px;
+  transform-origin: top left;
+  transition: transform 0.12s ease;
 }
 
 /* Stepped Magenta Double Border (Matching IIM Indore Reference) */
@@ -2266,9 +2580,59 @@ html, body {
   color: rgba(180, 83, 9, 0.08) !important;
 }
 
+
 /* ==========================================================================
-   Mobile Browser Responsiveness & Touch Optimization
+   Comprehensive Mobile, Tablet & Desktop Responsiveness System
+   (Tested for Chrome Android, Safari iOS, iPad, Foldables, & High-DPI screens)
    ========================================================================== */
+
+/* Base Viewport & Touch Optimization */
+html, body {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  position: relative;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+.app-container {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  min-height: 100vh;
+}
+
+/* Ensure inputs, select and textareas have min 16px font on touch to stop iOS auto-zoom */
+@media (max-width: 768px) {
+  input, select, textarea, .form-input {
+    font-size: 16px !important;
+  }
+}
+
+/* Touch Friendly Target Sizes */
+.btn {
+  min-height: 42px;
+  touch-action: manipulation;
+}
+
+/* Table Responsive Scrolling Container */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+  margin-bottom: 0.5rem;
+}
+
+.table-responsive table {
+  width: 100%;
+  border-collapse: collapse;
+}
 
 /* Inspector search input */
 .inspector-search-container {
@@ -2276,16 +2640,28 @@ html, body {
   flex: 1 1 auto;
 }
 
-.mobile-scale-btn {
-  display: none;
-}
+/* Tablet & Intermediate Screens (<= 1024px) */
+@media (max-width: 1024px) {
+  .navbar {
+    padding: 0.75rem 1.25rem;
+  }
+  
+  .main-content {
+    padding: 1.5rem 1.25rem 3.5rem;
+  }
 
-@media (max-width: 900px) {
-  .mobile-scale-btn {
-    display: inline-flex;
+  .step2-top-bar {
+    padding: 1rem 1.25rem;
+  }
+
+  .stats-card-group {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
   }
 }
 
+/* Mobile & Small Tablet Screens (<= 768px) */
 @media (max-width: 768px) {
   /* Navbar */
   .navbar {
@@ -2307,8 +2683,8 @@ html, body {
   }
 
   .launchpad-badge {
-    font-size: 0.6rem !important;
-    padding: 0.1rem 0.4rem !important;
+    font-size: 0.62rem !important;
+    padding: 0.12rem 0.45rem !important;
   }
 
   .user-profile-badge {
@@ -2316,7 +2692,7 @@ html, body {
   }
 
   .template-btn-label strong {
-    max-width: 90px;
+    max-width: 85px;
     display: inline-block;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -2324,15 +2700,22 @@ html, body {
     vertical-align: bottom;
   }
 
-  /* Stepper Navigation */
+  /* Main Container */
+  .main-content {
+    padding: 1rem 0.75rem 3rem !important;
+  }
+
+  /* Stepper Navigation: Responsive 3-Step Bar */
   .stepper-nav {
     display: flex !important;
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch !important;
     padding: 0.5rem 0.25rem !important;
-    gap: 0.5rem !important;
-    justify-content: flex-start !important;
+    gap: 0.4rem !important;
+    justify-content: space-between !important;
     scrollbar-width: none !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
 
   .stepper-nav::-webkit-scrollbar {
@@ -2344,53 +2727,88 @@ html, body {
   }
 
   .step-item {
-    flex: 0 0 auto !important;
-    min-width: auto !important;
-    padding: 0.45rem 0.75rem !important;
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    padding: 0.45rem 0.4rem !important;
     background: var(--bg-surface) !important;
     border: 1px solid var(--border-glass) !important;
-    border-radius: var(--radius-full) !important;
-    gap: 0.4rem !important;
+    border-radius: var(--radius-md) !important;
+    gap: 0.35rem !important;
+    justify-content: center !important;
+    text-align: center !important;
   }
 
-  .step-number {
+  .step-circle {
     width: 22px !important;
     height: 22px !important;
     font-size: 0.75rem !important;
+    flex-shrink: 0 !important;
   }
 
   .step-label {
-    font-size: 0.78rem !important;
+    font-size: 0.74rem !important;
     white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 
-  /* Step 1 Dropzone & Stats */
+  /* Step 1: Upload & Check */
   .dropzone-container {
     padding: 1.5rem 1rem !important;
   }
 
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
+  .dropzone-title {
+    font-size: 1.15rem !important;
+  }
+
+  .dropzone-sub {
+    font-size: 0.82rem !important;
+  }
+
+  .upload-actions-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 1rem !important;
+  }
+
+  .stats-card-group {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
     gap: 0.65rem !important;
+    width: 100% !important;
   }
 
-  .stat-card {
-    padding: 0.75rem !important;
+  .mini-stat-card {
+    padding: 0.65rem 0.85rem !important;
   }
 
-  .stat-number {
-    font-size: 1.4rem !important;
+  .mini-stat-card .stat-value {
+    font-size: 1.25rem !important;
+  }
+
+  .mini-stat-card .stat-label {
+    font-size: 0.72rem !important;
   }
 
   /* Step 2 Toolbar & Header */
-  .step2-header-card {
-    padding: 1rem !important;
+  .step2-top-bar {
+    padding: 1rem 0.85rem !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.85rem !important;
+  }
+
+  .step2-stats-group {
+    width: 100% !important;
+    justify-content: flex-start !important;
+    gap: 0.5rem !important;
   }
 
   .step2-toolbar {
     flex-direction: column !important;
     align-items: stretch !important;
     gap: 0.6rem !important;
+    width: 100% !important;
   }
 
   .step2-view-tabs {
@@ -2401,7 +2819,8 @@ html, body {
   .step2-view-tab {
     flex: 1 1 50% !important;
     justify-content: center !important;
-    padding: 0.6rem !important;
+    padding: 0.55rem 0.4rem !important;
+    font-size: 0.82rem !important;
   }
 
   .step2-toolbar .btn {
@@ -2410,7 +2829,26 @@ html, body {
     min-height: 42px !important;
   }
 
-  /* Inspector Nav Bar */
+  /* Step 2 Table Header & Search */
+  .step2-table-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.75rem !important;
+  }
+
+  .step2-search-input {
+    width: 100% !important;
+  }
+
+  .step2-search-input input {
+    width: 100% !important;
+  }
+
+  /* Inspector Stage */
+  .cert-inspector-card {
+    padding: 1rem 0.65rem !important;
+  }
+
   .inspector-nav-bar {
     flex-direction: column !important;
     align-items: stretch !important;
@@ -2425,119 +2863,188 @@ html, body {
     width: 100% !important;
   }
 
-  /* Certificate Frame on Mobile */
-  .cert-inspector-card {
-    padding: 1rem 0.5rem !important;
+  /* Viewer Toolbar */
+  .cert-viewer-toolbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.65rem !important;
+    padding: 0.65rem 0.75rem !important;
   }
 
-  .cert-preview-stage-container {
-    width: 100% !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    padding: 0.5rem 0 !important;
-  }
-
-  .certificate-frame-wrap {
-    min-width: 680px;
-    margin: 0 auto;
-    transition: all 0.3s ease;
-  }
-
-  /* Fit to mobile screen class */
-  .certificate-frame-wrap.mobile-cert-fit {
-    min-width: 100% !important;
+  .cert-zoom-controls {
+    justify-content: space-between !important;
     width: 100% !important;
   }
 
-  .certificate-frame-wrap.mobile-cert-fit .certificate-canvas {
-    padding: 18px 16px 14px !important;
+  .cert-viewer-quick-actions {
+    width: 100% !important;
   }
 
-  .certificate-frame-wrap.mobile-cert-fit .cert-title-hindi {
-    font-size: 0.95rem !important;
+  .cert-viewer-quick-actions .btn {
+    flex: 1 1 48% !important;
+    justify-content: center !important;
   }
 
-  .certificate-frame-wrap.mobile-cert-fit .cert-title-english {
-    font-size: 0.75rem !important;
-    margin-bottom: 2px !important;
+  /* Gallery Cards on Mobile */
+  .gallery-cert-card {
+    padding: 1rem 0.65rem !important;
   }
 
-  .certificate-frame-wrap.mobile-cert-fit .cert-header-left .cert-inst-logo {
-    width: 38px !important;
-    height: 38px !important;
+  .gallery-card-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.75rem !important;
   }
 
-  .certificate-frame-wrap.mobile-cert-fit .cert-photo-frame {
-    width: 44px !important;
-    height: 54px !important;
+  .gallery-card-actions {
+    width: 100% !important;
+    justify-content: flex-start !important;
   }
 
-  .certificate-frame-wrap.mobile-cert-fit .cert-qr-frame {
-    width: 44px !important;
-    height: 44px !important;
+  .gallery-card-actions .btn,
+  .gallery-card-actions .btn-view-pdf-row,
+  .gallery-card-actions .btn-pdf-row,
+  .gallery-card-actions .btn-approve-row {
+    flex: 1 1 auto !important;
+    justify-content: center !important;
   }
 
-  .certificate-frame-wrap.mobile-cert-fit .cert-section-hindi,
-  .certificate-frame-wrap.mobile-cert-fit .cert-section-english {
-    font-size: 0.7rem !important;
-    line-height: 1.4 !important;
+  /* Step 3: Dispatch Queue */
+  .quota-banner {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.75rem !important;
+    padding: 1rem 0.85rem !important;
   }
 
-  .certificate-frame-wrap.mobile-cert-fit .cert-pname-english {
-    font-size: 1.1rem !important;
+  .progress-section {
+    padding: 1.15rem 0.85rem !important;
   }
 
-  .certificate-frame-wrap.mobile-cert-fit .cert-pname-hindi {
-    font-size: 0.85rem !important;
+  .dispatch-controls {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.6rem !important;
   }
 
-  .certificate-frame-wrap.mobile-cert-fit .cert-prog-english,
-  .certificate-frame-wrap.mobile-cert-fit .cert-prog-hindi {
-    font-size: 0.76rem !important;
+  .dispatch-controls .btn {
+    width: 100% !important;
+    justify-content: center !important;
+    margin-left: 0 !important;
   }
 
-  .certificate-frame-wrap.mobile-cert-fit .cert-sig-script {
-    font-size: 0.9rem !important;
+  .summary-counts {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
   }
 
-  .certificate-frame-wrap.mobile-cert-fit .cert-sig-hindi,
-  .certificate-frame-wrap.mobile-cert-fit .cert-sig-english {
-    font-size: 0.6rem !important;
+  /* Auth Card on Mobile */
+  .auth-card {
+    padding: 1.75rem 1.25rem !important;
+    width: 100% !important;
   }
 
-  .certificate-frame-wrap.mobile-cert-fit .cert-bottom-bar {
-    font-size: 0.65rem !important;
+  .auth-header h1 {
+    font-size: 1.45rem !important;
   }
 
-  /* Touch buttons */
-  .btn {
-    min-height: 42px;
+  /* PDF Viewer Modal on Mobile */
+  .pdf-modal-card {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    padding: 1rem 0.75rem !important;
   }
 
-  .table-responsive {
-    -webkit-overflow-scrolling: touch;
-    overflow-x: auto;
+  .pdf-modal-toolbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.6rem !important;
+  }
+
+  .pdf-modal-zoom-group {
+    justify-content: space-between !important;
+    width: 100% !important;
+  }
+
+  .pdf-modal-actions-group {
+    width: 100% !important;
+  }
+
+  .pdf-modal-actions-group .btn {
+    flex: 1 1 48% !important;
+    justify-content: center !important;
+  }
+
+  .pdf-modal-viewport {
+    max-height: calc(100vh - 220px) !important;
   }
 }
 
+/* Extra Small Phones (<= 480px, iPhone SE, Galaxy, Pixel) */
 @media (max-width: 480px) {
   .portal-title-text {
     font-size: 0.95rem !important;
   }
 
-  .template-selector-btn .template-btn-label strong {
-    max-width: 65px;
+  .launchpad-badge {
+    display: none !important;
   }
 
-  .stats-grid {
+  #logoutBtn span {
+    display: none !important;
+  }
+
+  #logoutBtn {
+    padding: 0.4rem 0.55rem !important;
+  }
+
+  .template-selector-btn .template-btn-label strong {
+    max-width: 65px !important;
+  }
+
+  .step-label {
+    font-size: 0.68rem !important;
+  }
+
+  .step-circle {
+    width: 20px !important;
+    height: 20px !important;
+    font-size: 0.7rem !important;
+  }
+
+  .stats-card-group {
     grid-template-columns: 1fr !important;
   }
 
   .bodhidharma-footer-attribution {
-    padding: 0.85rem !important;
-    font-size: 0.78rem !important;
+    padding: 0.85rem 0.5rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  .bodhidharma-logo-img {
+    height: 26px !important;
   }
 }
 
+/* Very Small / Folded Screens (<= 360px) */
+@media (max-width: 360px) {
+  .navbar {
+    padding: 0.5rem 0.5rem !important;
+  }
 
+  .brand-rocket-icon {
+    width: 24px !important;
+    height: 24px !important;
+  }
 
+  .portal-title-text {
+    font-size: 0.85rem !important;
+  }
+
+  .cert-zoom-label {
+    min-width: 65px !important;
+    font-size: 0.75rem !important;
+  }
+}

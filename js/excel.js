@@ -224,17 +224,19 @@ const ExcelManager = (function() {
       UI.showToast("Loading Spreadsheet", `Reading ${fileName} from project workspace...`, "info");
       let rawJson = null;
 
-      try {
-        const res = await fetch(fileName);
-        if (res.ok) {
-          const arrayBuffer = await res.arrayBuffer();
-          const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: "array", cellDates: true });
-          const firstSheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[firstSheetName];
-          rawJson = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+      if (window.location.protocol !== "file:") {
+        try {
+          const res = await fetch(fileName);
+          if (res.ok) {
+            const arrayBuffer = await res.arrayBuffer();
+            const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: "array", cellDates: true });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            rawJson = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+          }
+        } catch (fetchErr) {
+          console.warn("Direct fetch failed, falling back to embedded dataset:", fetchErr);
         }
-      } catch (fetchErr) {
-        console.warn("Direct fetch failed, falling back to embedded dataset:", fetchErr);
       }
 
       if (!rawJson || rawJson.length === 0) {
@@ -575,11 +577,15 @@ const ExcelManager = (function() {
     } catch (e) {}
 
     if (window.CertificateManager) {
-      if (typeof window.CertificateManager.renderCandidateTable === "function") {
-        window.CertificateManager.renderCandidateTable(getValidRows());
-      }
-      if (typeof window.CertificateManager.updateApprovalCount === "function") {
-        window.CertificateManager.updateApprovalCount();
+      if (typeof window.CertificateManager.onEnterStep === "function") {
+        window.CertificateManager.onEnterStep();
+      } else {
+        if (typeof window.CertificateManager.renderCandidateTable === "function") {
+          window.CertificateManager.renderCandidateTable(getValidRows());
+        }
+        if (typeof window.CertificateManager.updateApprovalCount === "function") {
+          window.CertificateManager.updateApprovalCount();
+        }
       }
     }
   }
@@ -863,3 +869,5 @@ const ExcelManager = (function() {
     removeRow
   };
 })();
+
+if (typeof window !== "undefined") { window.ExcelManager = ExcelManager; }

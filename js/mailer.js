@@ -513,3 +513,5 @@ const MailerManager = (function() {
     exportResultsReport
   };
 })();
+
+if (typeof window !== "undefined") { window.MailerManager = MailerManager; }

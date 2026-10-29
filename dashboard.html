@@ -2,7 +2,7 @@
 <html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="description" content="IIM Indore Executive Education Certificate Generator Portal: Upload roster, inspect email syntax, preview bilingual certificates with photo and QR code, approve candidates, and dispatch verified PDFs.">
   <title>DTAI Launchpad — Executive Certificate Portal</title>
   
@@ -313,14 +313,15 @@
               <table class="step2-table custom-table" aria-label="Step 2 Candidate Roster Table">
                 <thead>
                   <tr>
-                    <th scope="col" style="width: 50px;">#</th>
-                    <th scope="col">Candidate Name (English & Hindi)</th>
+                    <th scope="col" style="width: 45px;">#</th>
+                    <th scope="col">Candidate Name (English &amp; Hindi)</th>
                     <th scope="col">Email Address</th>
                     <th scope="col">Credential ID</th>
                     <th scope="col">Approval Status</th>
-                    <th scope="col" style="text-align: center; width: 120px;">Download PDF</th>
-                    <th scope="col" style="text-align: center; width: 110px;">Preview</th>
-                    <th scope="col" style="text-align: right; width: 130px;">Validation</th>
+                    <th scope="col" style="text-align: center; width: 105px;">View PDF</th>
+                    <th scope="col" style="text-align: center; width: 115px;">Download</th>
+                    <th scope="col" style="text-align: center; width: 95px;">Preview</th>
+                    <th scope="col" style="text-align: right; width: 125px;">Validation</th>
                   </tr>
                 </thead>
                 <tbody id="step2TableBody">
@@ -394,8 +395,43 @@
             </div>
 
             <!-- The Printable Landscape A4 Certificate Frame -->
-            <div class="certificate-frame-wrap">
-              <div id="certificateCanvas" class="certificate-canvas">
+            <!-- Certificate Viewer Controls Bar (Zoom, Fit, View & Download) -->
+            <div class="cert-viewer-toolbar" role="toolbar" aria-label="Certificate Viewer Controls">
+              <div class="cert-zoom-controls">
+                <button id="certZoomOutBtn" class="btn btn-secondary btn-sm cert-zoom-btn" title="Zoom Out (-15%)" aria-label="Zoom Out">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+                <span id="certZoomLevelLabel" class="cert-zoom-label" title="Current Zoom Scale">Fit</span>
+                <button id="certZoomInBtn" class="btn btn-secondary btn-sm cert-zoom-btn" title="Zoom In (+15%)" aria-label="Zoom In">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+                <button id="certFitBtn" class="btn btn-secondary btn-sm" title="Fit Entire Certificate to Screen Width">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                  <span>Fit Screen</span>
+                </button>
+                <button id="certActualSizeBtn" class="btn btn-secondary btn-sm" title="100% Actual Print Size (Zoom to Inspect Details)">
+                  <span>100% Zoom</span>
+                </button>
+              </div>
+
+              <div class="cert-viewer-quick-actions">
+                <button id="viewPdfModalBtn" class="btn btn-secondary btn-sm" title="Open Full-Screen PDF Viewer & Inspection Modal">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <span>View PDF</span>
+                </button>
+                <button id="downloadSinglePdfBtn" class="btn btn-primary btn-sm" title="Download Official High-Resolution PDF Certificate">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  <span>Download PDF</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Responsive, Pinch/Pan Scrollable Viewport Stage -->
+            <div class="cert-viewport-stage" id="certViewportStage" tabindex="0" role="region" aria-label="Certificate Preview Stage">
+              <div class="cert-scaler-outer" id="certScalerOuter">
+                <div class="cert-scaler-inner" id="certScalerInner">
+                  <div class="certificate-frame-wrap" id="certificateFrameWrap">
+                    <div id="certificateCanvas" class="certificate-canvas">
                 <!-- Stepped Magenta Double Border -->
                 <div class="cert-iim-border-outer"></div>
                 <div class="cert-iim-border-inner"></div>
@@ -494,6 +530,9 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
 
         <!-- ================================================================ -->
         <!-- MODE 2: ALL CERTIFICATES GALLERY (SEE ALL AT ONCE ON THIS SCREEN) -->
@@ -641,6 +680,59 @@
         <img src="assets/bodhidharma-logo.svg?v=future" alt="Boddhidharma Lab Logo" class="bodhidharma-logo-img">
       </a>
     </footer>
+
+    <!-- Dedicated Certificate PDF Viewer Modal (Full Mobile, Tablet & Desktop Support) -->
+    <div id="pdfViewerModal" class="template-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pdfModalTitle">
+      <div class="pdf-modal-card glass-card">
+        <div class="pdf-modal-header">
+          <div class="pdf-modal-title-group">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span class="launchpad-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border-color: rgba(16, 185, 129, 0.35);">Official Verified PDF</span>
+              <h3 id="pdfModalTitle" class="pdf-modal-title" style="margin: 0;">Certificate PDF Preview</h3>
+            </div>
+            <p id="pdfModalSubtitle" class="pdf-modal-sub" style="margin: 4px 0 0; font-size: 0.85rem; color: var(--text-muted);">
+              Recipient: <strong id="pdfModalCandidateName" style="color: var(--text-primary);">Participant Name</strong> &bull; Credential ID: <code id="pdfModalCertId" style="color: var(--accent-cyan); font-family: monospace;">IIMI-EP-2026-0001</code>
+            </p>
+          </div>
+          <button id="closePdfModalBtn" class="btn-close" aria-label="Close modal">&times;</button>
+        </div>
+
+        <!-- Modal Toolbar -->
+        <div class="pdf-modal-toolbar">
+          <div class="pdf-modal-zoom-group">
+            <button id="modalZoomOutBtn" class="btn btn-secondary btn-sm cert-zoom-btn" title="Zoom Out" aria-label="Zoom Out">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+            <span id="modalZoomLevelLabel" class="cert-zoom-label">Fit</span>
+            <button id="modalZoomInBtn" class="btn btn-secondary btn-sm cert-zoom-btn" title="Zoom In" aria-label="Zoom In">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+            <button id="modalFitBtn" class="btn btn-secondary btn-sm" title="Fit to Screen Width">
+              <span>Fit Screen</span>
+            </button>
+            <button id="modalActualSizeBtn" class="btn btn-secondary btn-sm" title="100% Actual Size">
+              <span>100% Zoom</span>
+            </button>
+          </div>
+
+          <div class="pdf-modal-actions-group">
+            <button id="modalOpenExternalPdfBtn" class="btn btn-secondary btn-sm" title="Open PDF in new browser tab / native viewer">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              <span>View PDF in Tab</span>
+            </button>
+            <button id="modalDownloadPdfBtn" class="btn btn-primary btn-sm" title="Download PDF to device">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Download PDF</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Modal Viewport Container -->
+        <div class="pdf-modal-viewport" id="pdfModalViewport">
+          <div id="pdfModalContentContainer" class="pdf-modal-content"></div>
+        </div>
+      </div>
+    </div>
 
     <!-- Certificate Template Selector Modal -->
     <div id="templateModal" class="template-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="templateModalTitle">

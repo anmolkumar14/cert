@@ -6,13 +6,15 @@
  * 
  * Features:
  * - Bilingual Hindi & English official IIM Indore certificate rendering
- * - Candidate review table with direct PDF download icon and instant preview
- * - Live Certificate Inspector Stage with smooth candidate navigation
- * - All Certificates Multi-Gallery mode (see all certificates on one screen)
+ * - Candidate review table with direct View PDF & Download PDF actions
+ * - Interactive Certificate Viewport with Zoom In/Out, Fit to Screen, & 100% Zoom
+ * - Touch-enabled horizontal & vertical panning on mobile (Chrome & Safari)
+ * - Automatic responsive scaling preserving 1.414 / 1 aspect ratio on all viewports
+ * - Dedicated Certificate PDF Viewer Modal with direct View & Download actions
+ * - All Certificates Multi-Gallery mode with responsive scaling
  * - Dynamic QR Code generation client-side (via QRCode.js)
- * - Candidate photo rendering (with avatar fallback)
  * - Admin Approval Gating: Only approved candidates may proceed to email dispatch
- * - High-resolution PDF rendering via html2canvas & jsPDF (< 1 MB per PDF)
+ * - High-resolution print-quality PDF rendering via html2canvas & jsPDF (< 1 MB per PDF)
  * - Single PDF download & Batch ZIP export
  */
 
@@ -25,6 +27,22 @@ const CertificateManager = (function() {
   let currentViewMode = "table"; // 'table' | 'gallery'
   let currentFilterQuery = "";
   let activeTemplate = "iim-bilingual";
+
+  // Canonical Reference Dimensions (Standard A4 Landscape @ 1.414 ratio)
+  const CANONICAL_WIDTH = 860;
+  const CANONICAL_HEIGHT = 608;
+
+  // Viewport Zoom State
+  let currentScale = 1.0;
+  let isFitMode = true;
+
+  // Modal State
+  let modalCandidate = null;
+  let modalScale = 1.0;
+  let isModalFitMode = true;
+  let modalPdfBlobUrl = null;
+  let modalPdfInstance = null;
+  let modalPdfFilename = "";
 
   try {
     const savedT = localStorage.getItem("dtai_selected_template");
@@ -49,6 +67,82 @@ const CertificateManager = (function() {
     const viewModeTableBtn = document.getElementById("viewModeTableBtn");
     const viewModeGalleryBtn = document.getElementById("viewModeGalleryBtn");
     const candidateFilterInput = document.getElementById("step2CandidateFilter");
+
+    // Zoom Controls in Certificate Stage
+    const certZoomInBtn = document.getElementById("certZoomInBtn");
+    const certZoomOutBtn = document.getElementById("certZoomOutBtn");
+    const certFitBtn = document.getElementById("certFitBtn");
+    const certActualSizeBtn = document.getElementById("certActualSizeBtn");
+    const viewPdfModalBtn = document.getElementById("viewPdfModalBtn");
+
+    if (certZoomInBtn) certZoomInBtn.addEventListener("click", zoomIn);
+    if (certZoomOutBtn) certZoomOutBtn.addEventListener("click", zoomOut);
+    if (certFitBtn) certFitBtn.addEventListener("click", fitToScreen);
+    if (certActualSizeBtn) certActualSizeBtn.addEventListener("click", setActualSize);
+
+    if (viewPdfModalBtn) {
+      viewPdfModalBtn.addEventListener("click", () => {
+        if (!activeCandidate) {
+          const valid = ExcelManager.getValidRows();
+          if (valid.length > 0) activeCandidate = valid[0];
+        }
+        if (activeCandidate) openPdfModal(activeCandidate);
+      });
+    }
+
+    // Modal Controls
+    const closePdfModalBtn = document.getElementById("closePdfModalBtn");
+    const pdfViewerModal = document.getElementById("pdfViewerModal");
+    const modalZoomInBtn = document.getElementById("modalZoomInBtn");
+    const modalZoomOutBtn = document.getElementById("modalZoomOutBtn");
+    const modalFitBtn = document.getElementById("modalFitBtn");
+    const modalActualSizeBtn = document.getElementById("modalActualSizeBtn");
+    const modalOpenExternalPdfBtn = document.getElementById("modalOpenExternalPdfBtn");
+    const modalDownloadPdfBtn = document.getElementById("modalDownloadPdfBtn");
+
+    if (closePdfModalBtn) closePdfModalBtn.addEventListener("click", closePdfModal);
+    if (pdfViewerModal) {
+      pdfViewerModal.addEventListener("click", (e) => {
+        if (e.target === pdfViewerModal) closePdfModal();
+      });
+    }
+
+    if (modalZoomInBtn) modalZoomInBtn.addEventListener("click", modalZoomIn);
+    if (modalZoomOutBtn) modalZoomOutBtn.addEventListener("click", modalZoomOut);
+    if (modalFitBtn) modalFitBtn.addEventListener("click", modalFitToScreen);
+    if (modalActualSizeBtn) modalActualSizeBtn.addEventListener("click", modalSetActualSize);
+
+    if (modalOpenExternalPdfBtn) {
+      modalOpenExternalPdfBtn.addEventListener("click", () => {
+        if (modalPdfBlobUrl) {
+          window.open(modalPdfBlobUrl, "_blank");
+        } else if (modalCandidate) {
+          downloadSinglePdf(modalCandidate);
+        }
+      });
+    }
+
+    if (modalDownloadPdfBtn) {
+      modalDownloadPdfBtn.addEventListener("click", () => {
+        if (modalPdfInstance && modalPdfFilename) {
+          modalPdfInstance.save(modalPdfFilename);
+          UI.showToast("PDF Downloaded", `Saved ${modalPdfFilename}`, "success");
+        } else if (modalCandidate) {
+          downloadSinglePdf(modalCandidate);
+        }
+      });
+    }
+
+    // Keyboard ESC to close modals
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        closePdfModal();
+        const templateModal = document.getElementById("templateModal");
+        if (templateModal && !templateModal.classList.contains("hidden")) {
+          templateModal.classList.add("hidden");
+        }
+      }
+    });
 
     // Single PDF Download
     if (downloadSinglePdfBtn) {
@@ -136,10 +230,10 @@ const CertificateManager = (function() {
     if (toggleWatermarkBtn) {
       toggleWatermarkBtn.addEventListener("click", () => {
         showWatermark = !showWatermark;
-        const watermarkEl = document.getElementById("certSampleWatermark");
-        if (watermarkEl) {
-          watermarkEl.style.display = showWatermark ? "block" : "none";
-        }
+        const watermarkEls = document.querySelectorAll(".cert-sample-watermark");
+        watermarkEls.forEach(el => {
+          el.style.display = showWatermark ? "block" : "none";
+        });
         toggleWatermarkBtn.textContent = showWatermark ? "Hide Watermark" : "Show Watermark";
       });
     }
@@ -188,23 +282,6 @@ const CertificateManager = (function() {
       });
     }
 
-    // Mobile Viewport Scale Toggle
-    const mobileScaleBtn = document.getElementById("mobileScaleToggleBtn");
-    const mobileScaleText = document.getElementById("mobileScaleBtnText");
-    let isMobileFit = false;
-
-    if (mobileScaleBtn) {
-      mobileScaleBtn.addEventListener("click", () => {
-        isMobileFit = !isMobileFit;
-        const certFrames = document.querySelectorAll(".certificate-frame-wrap");
-        certFrames.forEach(f => f.classList.toggle("mobile-cert-fit", isMobileFit));
-        if (mobileScaleText) {
-          mobileScaleText.textContent = isMobileFit ? "🔍 Full Size" : "📱 Fit Screen";
-        }
-        UI.showToast("Mobile View", isMobileFit ? "Scaled certificate to fit screen cleanly." : "Restored full-size landscape canvas.", "info");
-      });
-    }
-
     // Certificate Template Triggers & Modal
     const selectTemplateBtn = document.getElementById("selectTemplateBtn");
     const step2TemplateBtn = document.getElementById("step2TemplateBtn");
@@ -242,8 +319,241 @@ const CertificateManager = (function() {
       });
     });
 
+    // Window Resize & Orientation Auto-Fit handler
+    let resizeTimer = null;
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        if (isFitMode && currentViewMode === "table") {
+          fitToScreen();
+        }
+        if (isModalFitMode && modalCandidate) {
+          modalFitToScreen();
+        }
+        if (currentViewMode === "gallery") {
+          scaleGalleryCertificates();
+        }
+      }, 80);
+    });
+
+    window.addEventListener("orientationchange", () => {
+      setTimeout(() => {
+        if (isFitMode) fitToScreen();
+        if (isModalFitMode && modalCandidate) modalFitToScreen();
+      }, 150);
+    });
+
     // Apply default/saved template
     setTemplate(activeTemplate, false);
+  }
+
+  /**
+   * Calculate auto-fit scale based on container width
+   */
+  function calculateFitScale(containerEl) {
+    if (!containerEl) return 1.0;
+    const availableWidth = containerEl.clientWidth - 16;
+    if (availableWidth <= 0) return 1.0;
+    // Scale so the 860px canvas fits cleanly inside availableWidth
+    const scale = Math.min(Math.round((availableWidth / CANONICAL_WIDTH) * 1000) / 1000, 1.0);
+    return Math.max(scale, 0.28);
+  }
+
+  /**
+   * Apply scale to the main Inspector Certificate Viewport
+   */
+  function applyScale(scale, isFit = false) {
+    currentScale = scale;
+    isFitMode = isFit;
+
+    const outer = document.getElementById("certScalerOuter");
+    const inner = document.getElementById("certScalerInner");
+    const label = document.getElementById("certZoomLevelLabel");
+
+    if (outer && inner) {
+      outer.style.width = `${Math.round(CANONICAL_WIDTH * scale)}px`;
+      outer.style.height = `${Math.round(CANONICAL_HEIGHT * scale)}px`;
+      inner.style.transform = `scale(${scale})`;
+    }
+
+    if (label) {
+      label.textContent = isFit ? `Fit (${Math.round(scale * 100)}%)` : `${Math.round(scale * 100)}%`;
+    }
+  }
+
+  /**
+   * Fit entire certificate inside the screen width without cropping
+   */
+  function fitToScreen() {
+    const stage = document.getElementById("certViewportStage");
+    if (!stage) return;
+    const fitScale = calculateFitScale(stage);
+    applyScale(fitScale, true);
+  }
+
+  /**
+   * Zoom In on certificate
+   */
+  function zoomIn() {
+    isFitMode = false;
+    const nextScale = Math.min(Math.round((currentScale + 0.15) * 100) / 100, 2.5);
+    applyScale(nextScale, false);
+  }
+
+  /**
+   * Zoom Out on certificate
+   */
+  function zoomOut() {
+    isFitMode = false;
+    const nextScale = Math.max(Math.round((currentScale - 0.15) * 100) / 100, 0.25);
+    applyScale(nextScale, false);
+  }
+
+  /**
+   * Set certificate to 100% actual print size for inspecting details
+   */
+  function setActualSize() {
+    applyScale(1.0, false);
+  }
+
+  /**
+   * Open Dedicated Certificate PDF Viewer Modal
+   */
+  async function openPdfModal(candidate) {
+    modalCandidate = candidate;
+    const modal = document.getElementById("pdfViewerModal");
+    const titleEl = document.getElementById("pdfModalCandidateName");
+    const certIdEl = document.getElementById("pdfModalCertId");
+    const contentContainer = document.getElementById("pdfModalContentContainer");
+    const openExternalBtn = document.getElementById("modalOpenExternalPdfBtn");
+    const downloadBtn = document.getElementById("modalDownloadPdfBtn");
+
+    if (!modal) return;
+
+    if (titleEl) titleEl.textContent = `${candidate.name}${candidate.nameHindi ? ` (${candidate.nameHindi})` : ''}`;
+    if (certIdEl) certIdEl.textContent = candidate.certId || "IIMI-EP-2026-0001";
+
+    // Show modal immediately
+    modal.classList.remove("hidden");
+
+    if (contentContainer) {
+      contentContainer.innerHTML = `
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 280px; gap: 0.85rem; color: var(--text-muted);">
+          <span class="spinner" style="width: 32px; height: 32px; border-width: 3px;"></span>
+          <span style="font-size: 0.95rem; font-weight: 600;">Generating high-resolution official PDF preview...</span>
+        </div>
+      `;
+    }
+
+    try {
+      // Ensure canvas has current candidate info
+      updateCertificatePreview(candidate);
+      await new Promise(resolve => setTimeout(resolve, 80));
+
+      // Render canvas & PDF instance
+      const canvas = await renderCertCanvas();
+      const pdf = canvasToPdf(canvas);
+      modalPdfInstance = pdf;
+
+      const safeName = (candidate.name || "Participant").replace(/[^a-zA-Z0-9_-]/g, "_");
+      modalPdfFilename = `Certificate_${safeName}_${candidate.certId}.pdf`;
+
+      // Generate Blob URL
+      const blob = pdf.output("blob");
+      if (modalPdfBlobUrl) {
+        URL.revokeObjectURL(modalPdfBlobUrl);
+      }
+      modalPdfBlobUrl = URL.createObjectURL(blob);
+
+      // Render high-res preview in modal
+      const previewImgData = canvas.toDataURL("image/jpeg", 0.95);
+
+      if (contentContainer) {
+        contentContainer.innerHTML = `
+          <div class="modal-scaler-outer" id="modalScalerOuter">
+            <div class="modal-scaler-inner" id="modalScalerInner">
+              <div class="certificate-frame-wrap" style="width: ${CANONICAL_WIDTH}px; height: ${CANONICAL_HEIGHT}px;">
+                <img src="${previewImgData}" alt="Certificate Preview for ${escapeHtml(candidate.name)}" style="width: 100%; height: 100%; object-fit: contain; display: block; border-radius: 4px;">
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // Initial fit in modal
+      modalFitToScreen();
+    } catch (err) {
+      console.error("Modal PDF preview failed:", err);
+      if (contentContainer) {
+        contentContainer.innerHTML = `
+          <div style="padding: 2rem; text-align: center; color: var(--status-danger);">
+            <p><strong>Failed to render PDF preview:</strong> ${escapeHtml(err.message)}</p>
+            <button class="btn btn-primary" onclick="CertificateManager.downloadCandidatePdf('${candidate.id}')" style="margin-top: 1rem;">
+              Download PDF Directly
+            </button>
+          </div>
+        `;
+      }
+    }
+  }
+
+  /**
+   * Close PDF Viewer Modal
+   */
+  function closePdfModal() {
+    const modal = document.getElementById("pdfViewerModal");
+    if (modal) modal.classList.add("hidden");
+    if (modalPdfBlobUrl) {
+      URL.revokeObjectURL(modalPdfBlobUrl);
+      modalPdfBlobUrl = null;
+    }
+    modalPdfInstance = null;
+    modalCandidate = null;
+  }
+
+  /**
+   * Apply scale to the Modal Preview
+   */
+  function applyModalScale(scale, isFit = false) {
+    modalScale = scale;
+    isModalFitMode = isFit;
+
+    const outer = document.getElementById("modalScalerOuter");
+    const inner = document.getElementById("modalScalerInner");
+    const label = document.getElementById("modalZoomLevelLabel");
+
+    if (outer && inner) {
+      outer.style.width = `${Math.round(CANONICAL_WIDTH * scale)}px`;
+      outer.style.height = `${Math.round(CANONICAL_HEIGHT * scale)}px`;
+      inner.style.transform = `scale(${scale})`;
+    }
+
+    if (label) {
+      label.textContent = isFit ? `Fit (${Math.round(scale * 100)}%)` : `${Math.round(scale * 100)}%`;
+    }
+  }
+
+  function modalFitToScreen() {
+    const viewport = document.getElementById("pdfModalViewport");
+    if (!viewport) return;
+    const fitScale = calculateFitScale(viewport);
+    applyModalScale(fitScale, true);
+  }
+
+  function modalZoomIn() {
+    isModalFitMode = false;
+    const nextScale = Math.min(Math.round((modalScale + 0.15) * 100) / 100, 2.5);
+    applyModalScale(nextScale, false);
+  }
+
+  function modalZoomOut() {
+    isModalFitMode = false;
+    const nextScale = Math.max(Math.round((modalScale - 0.15) * 100) / 100, 0.25);
+    applyModalScale(nextScale, false);
+  }
+
+  function modalSetActualSize() {
+    applyModalScale(1.0, false);
   }
 
   /**
@@ -314,10 +624,10 @@ const CertificateManager = (function() {
   /**
    * Called whenever user navigates to Step 2
    */
-  function onEnterStep() {
+  async function onEnterStep() {
     let validRows = ExcelManager.getValidRows();
     if (validRows.length === 0) {
-      ExcelManager.loadWorkspaceFile("IIMcandidatelist.xlsx");
+      await ExcelManager.loadWorkspaceFile("IIMcandidatelist.xlsx");
       validRows = ExcelManager.getValidRows();
     }
 
@@ -330,6 +640,11 @@ const CertificateManager = (function() {
       updateApprovalStateUI(activeCandidate);
       updateApprovalCount();
 
+      // Trigger auto-fit to screen
+      setTimeout(() => {
+        fitToScreen();
+      }, 50);
+
       if (currentViewMode === "gallery") {
         renderCertificatesGallery(getFilteredCandidates());
       }
@@ -337,7 +652,7 @@ const CertificateManager = (function() {
   }
 
   /**
-   * Populate Candidate Review Table with PDF download and preview actions
+   * Populate Candidate Review Table with View PDF, Download PDF, and preview actions
    */
   function renderCandidateTable(candidates) {
     const tbody = document.getElementById("step2TableBody");
@@ -348,7 +663,7 @@ const CertificateManager = (function() {
     if (candidates.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+          <td colspan="9" style="text-align: center; padding: 2rem; color: var(--text-muted);">
             No matching candidates found for "<strong>${escapeHtml(currentFilterQuery)}</strong>".
           </td>
         </tr>
@@ -385,14 +700,20 @@ const CertificateManager = (function() {
           ${approvalBadge}
         </td>
         <td style="text-align: center;">
-          <button class="btn-pdf-row" data-action="download-pdf" data-id="${cand.id}" title="Download PDF certificate for ${escapeHtml(cand.name)}">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            <span>PDF</span>
+          <button class="btn-view-pdf-row" data-action="view-pdf" data-id="${cand.id}" title="View PDF certificate for ${escapeHtml(cand.name)}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span>View PDF</span>
           </button>
         </td>
         <td style="text-align: center;">
-          <button class="btn-preview-row" data-action="preview" data-id="${cand.id}" title="Preview certificate below">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <button class="btn-pdf-row" data-action="download-pdf" data-id="${cand.id}" title="Download PDF certificate for ${escapeHtml(cand.name)}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <span>Download</span>
+          </button>
+        </td>
+        <td style="text-align: center;">
+          <button class="btn-preview-row" data-action="preview" data-id="${cand.id}" title="Inspect certificate in live preview">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
             <span>Preview</span>
           </button>
         </td>
@@ -405,11 +726,15 @@ const CertificateManager = (function() {
         </td>
       `;
 
-      // Click on row to preview
+      // Click on row to preview or trigger button action
       tr.addEventListener("click", (e) => {
         const actionBtn = e.target.closest("button");
         if (actionBtn) {
           const action = actionBtn.getAttribute("data-action");
+          if (action === "view-pdf") {
+            viewCandidatePdf(cand.id);
+            return;
+          }
           if (action === "download-pdf") {
             downloadCandidatePdf(cand.id);
             return;
@@ -453,6 +778,11 @@ const CertificateManager = (function() {
       });
     }
 
+    // Re-fit canvas smoothly
+    if (isFitMode) {
+      fitToScreen();
+    }
+
     // Scroll to inspector stage if requested
     if (shouldScroll) {
       const stage = document.getElementById("certificateInspectorStage");
@@ -480,6 +810,19 @@ const CertificateManager = (function() {
 
     const nextCand = validRows[nextIndex];
     selectCandidate(nextCand.id, true);
+  }
+
+  /**
+   * View PDF for a specific candidate ID directly from table row or gallery
+   */
+  async function viewCandidatePdf(candidateId) {
+    const validRows = ExcelManager.getValidRows();
+    const cand = validRows.find(c => c.id === candidateId);
+    if (!cand) return;
+
+    activeCandidate = cand;
+    updateApprovalStateUI(cand);
+    await openPdfModal(cand);
   }
 
   /**
@@ -546,6 +889,7 @@ const CertificateManager = (function() {
       if (gallerySection) gallerySection.classList.add("hidden");
       if (tableBtn) tableBtn.classList.add("active");
       if (galleryBtn) galleryBtn.classList.remove("active");
+      setTimeout(() => fitToScreen(), 50);
     }
   }
 
@@ -571,11 +915,12 @@ const CertificateManager = (function() {
       const isApproved = cand.adminApproved === true;
       const card = document.createElement("div");
       card.className = "gallery-cert-card glass-card";
+      card.dataset.candidateId = cand.id;
 
       card.innerHTML = `
         <div class="gallery-card-header">
           <div>
-            <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
               <span style="font-size: 1.15rem; font-weight: 700;">#${cand.rollNo || (idx + 1)}. ${escapeHtml(cand.name)}</span>
               ${cand.nameHindi ? `<span style="font-size: 0.95rem; color: var(--accent-magenta); font-family: 'Tiro Devanagari Hindi', serif;">(${escapeHtml(cand.nameHindi)})</span>` : ""}
             </div>
@@ -584,95 +929,108 @@ const CertificateManager = (function() {
             </div>
           </div>
 
-          <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <div class="gallery-card-actions">
+            <button class="btn-view-pdf-row" onclick="CertificateManager.viewCandidatePdf('${cand.id}')" title="View PDF in Viewer Modal">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <span>View PDF</span>
+            </button>
+
             <button class="btn-pdf-row" onclick="CertificateManager.downloadCandidatePdf('${cand.id}')" title="Download PDF">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-              <span>Download PDF</span>
+              <span>Download</span>
             </button>
 
             <button class="btn-approve-row ${isApproved ? 'is-approved' : ''}" onclick="CertificateManager.toggleCandidateApproval('${cand.id}')">
               ${isApproved 
-                ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Validated & Approved` 
-                : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Validate & Approve`}
+                ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Approved` 
+                : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Approve`}
             </button>
           </div>
         </div>
 
-        <!-- Rendered Certificate Card Frame -->
-        <div class="certificate-frame-wrap" style="transform: scale(0.96); transform-origin: top center;">
-          <div class="certificate-canvas" data-template="${activeTemplate}">
-            <div class="cert-iim-border-outer"></div>
-            <div class="cert-iim-border-inner"></div>
+        <!-- Rendered Scalable Certificate Frame -->
+        <div class="cert-gallery-stage" id="gallery_stage_${cand.id}">
+          <div class="cert-gallery-scaler-outer" id="gallery_outer_${cand.id}">
+            <div class="cert-gallery-scaler-inner" id="gallery_inner_${cand.id}">
+              <div class="certificate-frame-wrap" style="width: ${CANONICAL_WIDTH}px; height: ${CANONICAL_HEIGHT}px;">
+                <div class="certificate-canvas" data-template="${activeTemplate}" style="width: ${CANONICAL_WIDTH}px; height: ${CANONICAL_HEIGHT}px;">
+                  <div class="cert-iim-border-outer"></div>
+                  <div class="cert-iim-border-inner"></div>
 
-            <div class="cert-corner-step cert-corner-step-tl"></div>
-            <div class="cert-corner-step cert-corner-step-tr"></div>
-            <div class="cert-corner-step cert-corner-step-bl"></div>
-            <div class="cert-corner-step cert-corner-step-br"></div>
+                  <div class="cert-corner-step cert-corner-step-tl"></div>
+                  <div class="cert-corner-step cert-corner-step-tr"></div>
+                  <div class="cert-corner-step cert-corner-step-bl"></div>
+                  <div class="cert-corner-step cert-corner-step-br"></div>
 
-            <div class="cert-top-header">
-              <div class="cert-header-left">
-                <img src="assets/logo.svg" alt="IIM Indore Logo" class="cert-inst-logo">
-              </div>
+                  <div class="cert-sample-watermark" style="display: ${showWatermark ? 'block' : 'none'};">SAMPLE</div>
 
-              <div class="cert-header-center">
-                <div class="cert-title-hindi">भारतीय प्रबंध संस्थान इंदौर</div>
-                <div class="cert-title-english">INDIAN INSTITUTE OF MANAGEMENT INDORE</div>
-                <div class="cert-header-rule"></div>
-              </div>
+                  <div class="cert-top-header">
+                    <div class="cert-header-left">
+                      <img src="assets/logo.svg" alt="IIM Indore Logo" class="cert-inst-logo">
+                    </div>
 
-              <div class="cert-header-right">
-                <div class="cert-photo-frame" title="Participant Photo">
-                  <img src="assets/avatar.svg" alt="Photo" class="cert-photo-img">
+                    <div class="cert-header-center">
+                      <div class="cert-title-hindi">भारतीय प्रबंध संस्थान इंदौर</div>
+                      <div class="cert-title-english">INDIAN INSTITUTE OF MANAGEMENT INDORE</div>
+                      <div class="cert-header-rule"></div>
+                    </div>
+
+                    <div class="cert-header-right">
+                      <div class="cert-photo-frame" title="Participant Photo">
+                        <img src="${cand.photoUrl || 'assets/avatar.svg'}" alt="Photo" class="cert-photo-img">
+                      </div>
+                      <div class="cert-qr-frame" id="gallery_qr_${cand.id}"></div>
+                    </div>
+                  </div>
+
+                  <div class="cert-bilingual-body">
+                    <div class="cert-section-hindi">
+                      <div>प्रमाणित किया जाता है कि</div>
+                      <div class="cert-pname-hindi">${escapeHtml(cand.nameHindi || cand.name)}</div>
+                      <div>ने <strong>${escapeHtml(cand.periodHindi || CONFIG.CERTIFICATE.defaultPeriodHindi)}</strong> के दौरान</div>
+                      <div>भारतीय प्रबंध संस्थान इंदौर द्वारा आयोजित <strong>${escapeHtml(cand.durationHindi || CONFIG.CERTIFICATE.defaultDurationHindi)}</strong> का ऑनलाइन (एसिंक्रोनस)</div>
+                      <div class="cert-prog-hindi">${escapeHtml(cand.programmeHindi || CONFIG.CERTIFICATE.defaultProgrammeHindi)}</div>
+                      <div>सफलतापूर्वक पूर्ण किया।</div>
+                    </div>
+
+                    <div class="cert-section-english">
+                      <div>This is to certify that</div>
+                      <div class="cert-pname-english">${escapeHtml(cand.name)}</div>
+                      <div>has successfully completed the <strong class="cert-highlight">${escapeHtml(cand.duration || CONFIG.CERTIFICATE.defaultDuration)}</strong> online (asynchronous)</div>
+                      <div class="cert-prog-english">${escapeHtml(cand.programme || CONFIG.CERTIFICATE.defaultProgramme)}</div>
+                      <div>conducted by</div>
+                      <div>the Indian Institute of Management Indore</div>
+                      <div>during <strong class="cert-highlight">${escapeHtml(cand.period || CONFIG.CERTIFICATE.defaultPeriod)}</strong>.</div>
+                    </div>
+                  </div>
+
+                  <div class="cert-signatures-grid">
+                    <div class="cert-sig-item">
+                      <div class="cert-sig-script">S. R. Sharma</div>
+                      <div class="cert-sig-divider"></div>
+                      <div class="cert-sig-hindi">कार्यक्रम समन्वयक</div>
+                      <div class="cert-sig-english">Programme Coordinator</div>
+                    </div>
+                    <div class="cert-sig-item">
+                      <div class="cert-sig-script">Ananya Gupta</div>
+                      <div class="cert-sig-divider"></div>
+                      <div class="cert-sig-hindi">अध्यक्ष, कार्यपालक शिक्षा</div>
+                      <div class="cert-sig-english">Chairperson, Executive Education</div>
+                    </div>
+                    <div class="cert-sig-item">
+                      <div class="cert-sig-script">Himanshu Rai</div>
+                      <div class="cert-sig-divider"></div>
+                      <div class="cert-sig-hindi">निदेशक, भा. प्र. सं. इंदौर</div>
+                      <div class="cert-sig-english">Director, IIM Indore</div>
+                    </div>
+                  </div>
+
+                  <div class="cert-bottom-bar">
+                    <span>Executive Education Office, IIM Indore</span>
+                    <span>Credential ID: <strong style="font-family: monospace;">${escapeHtml(cand.certId)}</strong></span>
+                  </div>
                 </div>
-                <div class="cert-qr-frame" id="gallery_qr_${cand.id}"></div>
               </div>
-            </div>
-
-            <div class="cert-bilingual-body">
-              <div class="cert-section-hindi">
-                <div>प्रमाणित किया जाता है कि</div>
-                <div class="cert-pname-hindi">${escapeHtml(cand.nameHindi || cand.name)}</div>
-                <div>ने <strong>${escapeHtml(cand.periodHindi || CONFIG.CERTIFICATE.defaultPeriodHindi)}</strong> के दौरान</div>
-                <div>भारतीय प्रबंध संस्थान इंदौर द्वारा आयोजित <strong>${escapeHtml(cand.durationHindi || CONFIG.CERTIFICATE.defaultDurationHindi)}</strong> का ऑनलाइन (एसिंक्रोनस)</div>
-                <div class="cert-prog-hindi">${escapeHtml(cand.programmeHindi || CONFIG.CERTIFICATE.defaultProgrammeHindi)}</div>
-                <div>सफलतापूर्वक पूर्ण किया।</div>
-              </div>
-
-              <div class="cert-section-english">
-                <div>This is to certify that</div>
-                <div class="cert-pname-english">${escapeHtml(cand.name)}</div>
-                <div>has successfully completed the <strong class="cert-highlight">${escapeHtml(cand.duration || CONFIG.CERTIFICATE.defaultDuration)}</strong> online (asynchronous)</div>
-                <div class="cert-prog-english">${escapeHtml(cand.programme || CONFIG.CERTIFICATE.defaultProgramme)}</div>
-                <div>conducted by</div>
-                <div>the Indian Institute of Management Indore</div>
-                <div>during <strong class="cert-highlight">${escapeHtml(cand.period || CONFIG.CERTIFICATE.defaultPeriod)}</strong>.</div>
-              </div>
-            </div>
-
-            <div class="cert-signatures-grid">
-              <div class="cert-sig-item">
-                <div class="cert-sig-script">S. R. Sharma</div>
-                <div class="cert-sig-divider"></div>
-                <div class="cert-sig-hindi">कार्यक्रम समन्वयक</div>
-                <div class="cert-sig-english">Programme Coordinator</div>
-              </div>
-              <div class="cert-sig-item">
-                <div class="cert-sig-script">Ananya Gupta</div>
-                <div class="cert-sig-divider"></div>
-                <div class="cert-sig-hindi">अध्यक्ष, कार्यपालक शिक्षा</div>
-                <div class="cert-sig-english">Chairperson, Executive Education</div>
-              </div>
-              <div class="cert-sig-item">
-                <div class="cert-sig-script">Himanshu Rai</div>
-                <div class="cert-sig-divider"></div>
-                <div class="cert-sig-hindi">निदेशक, भा. प्र. सं. इंदौर</div>
-                <div class="cert-sig-english">Director, IIM Indore</div>
-              </div>
-            </div>
-
-            <div class="cert-bottom-bar">
-              <span>Executive Education Office, IIM Indore</span>
-              <span>Credential ID: <strong style="font-family: monospace;">${escapeHtml(cand.certId)}</strong></span>
             </div>
           </div>
         </div>
@@ -695,6 +1053,29 @@ const CertificateManager = (function() {
           });
         }
       }, 20);
+    });
+
+    // Scale all gallery cards
+    setTimeout(scaleGalleryCertificates, 50);
+  }
+
+  /**
+   * Scale gallery certificates to fit their card containers responsively
+   */
+  function scaleGalleryCertificates() {
+    const stages = document.querySelectorAll(".cert-gallery-stage");
+    stages.forEach(stage => {
+      const outer = stage.querySelector(".cert-gallery-scaler-outer");
+      const inner = stage.querySelector(".cert-gallery-scaler-inner");
+      if (outer && inner) {
+        const availWidth = stage.clientWidth - 8;
+        if (availWidth > 0) {
+          const scale = Math.min(Math.round((availWidth / CANONICAL_WIDTH) * 1000) / 1000, 1.0);
+          outer.style.width = `${Math.round(CANONICAL_WIDTH * scale)}px`;
+          outer.style.height = `${Math.round(CANONICAL_HEIGHT * scale)}px`;
+          inner.style.transform = `scale(${scale})`;
+        }
+      }
     });
   }
 
@@ -862,6 +1243,7 @@ const CertificateManager = (function() {
 
   /**
    * Render certificate DOM node into an HTML5 Canvas using html2canvas
+   * (Temporarily resets scale to 1.0 to guarantee 300 DPI print quality without distortion)
    */
   async function renderCertCanvas() {
     const certElement = document.getElementById("certificateCanvas");
@@ -871,14 +1253,40 @@ const CertificateManager = (function() {
       await document.fonts.ready;
     }
 
-    const canvas = await html2canvas(certElement, {
-      scale: 2.2, // ~300 DPI print quality
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: "#ffffff",
-      logging: false,
-      imageTimeout: 15000
-    });
+    // Temporarily unscale the canvas wrapper for high-res capture
+    const inner = document.getElementById("certScalerInner");
+    const outer = document.getElementById("certScalerOuter");
+    const prevTransform = inner ? inner.style.transform : "";
+    const prevOuterWidth = outer ? outer.style.width : "";
+    const prevOuterHeight = outer ? outer.style.height : "";
+
+    if (inner) inner.style.transform = "scale(1)";
+    if (outer) {
+      outer.style.width = `${CANONICAL_WIDTH}px`;
+      outer.style.height = `${CANONICAL_HEIGHT}px`;
+    }
+
+    // Force layout reflow
+    void certElement.offsetHeight;
+
+    let canvas;
+    try {
+      canvas = await html2canvas(certElement, {
+        scale: 2.2, // ~300 DPI print quality
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+        imageTimeout: 15000,
+        width: CANONICAL_WIDTH,
+        height: CANONICAL_HEIGHT
+      });
+    } finally {
+      // Restore user's current scale
+      if (inner && prevTransform) inner.style.transform = prevTransform;
+      if (outer && prevOuterWidth) outer.style.width = prevOuterWidth;
+      if (outer && prevOuterHeight) outer.style.height = prevOuterHeight;
+    }
 
     return canvas;
   }
@@ -1043,11 +1451,20 @@ const CertificateManager = (function() {
     updateApprovalCount,
     downloadSinglePdf,
     downloadCandidatePdf,
+    viewCandidatePdf,
+    openPdfModal,
+    closePdfModal,
     toggleCandidateApproval,
     selectCandidate,
     renderCandidateTable,
     setViewMode,
     downloadAllCertificatesZip,
-    generatePdfBase64
+    generatePdfBase64,
+    fitToScreen,
+    zoomIn,
+    zoomOut,
+    setActualSize
   };
 })();
+
+if (typeof window !== "undefined") { window.CertificateManager = CertificateManager; }
