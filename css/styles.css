@@ -3048,3 +3048,176 @@ html, body {
     font-size: 0.75rem !important;
   }
 }
+
+
+/* ==========================================================================
+   Post-Login Mobile Right-Scrolling Support
+   Allows mobile browser users to scroll right to view the complete site
+   ========================================================================== */
+
+/* Pre-Login Auth Page (Centered, no unwanted overflow) */
+body.auth-page {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  position: relative;
+}
+
+body.auth-page .app-container {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  min-height: 100vh;
+}
+
+/* Post-Login Dashboard Page: Smooth horizontal scrolling enabled on mobile */
+body.dashboard-page {
+  width: 100% !important;
+  max-width: none !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  position: relative;
+}
+
+body.dashboard-page .app-container {
+  min-width: 100vw !important;
+  width: max-content !important;
+  max-width: none !important;
+  overflow-x: visible !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
+  min-height: 100vh !important;
+}
+
+/* Stretch background, navbar and footer to full scrollable container width */
+body.dashboard-page .navbar,
+body.dashboard-page .bodhidharma-footer-attribution {
+  min-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Ensure post-login main content allows complete site to be viewed by scrolling right */
+@media (max-width: 900px) {
+  body.dashboard-page .main-content {
+    min-width: 920px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  body.dashboard-page .navbar {
+    min-width: 920px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    white-space: nowrap !important;
+    gap: 1rem !important;
+  }
+
+  body.dashboard-page .bodhidharma-footer-attribution {
+    min-width: 920px !important;
+  }
+
+  /* Keep full navbar elements visible when scrolling right */
+  body.dashboard-page .user-profile-badge {
+    display: flex !important;
+  }
+
+  body.dashboard-page .launchpad-badge {
+    display: inline-flex !important;
+  }
+
+  body.dashboard-page #logoutBtn span {
+    display: inline !important;
+  }
+
+  body.dashboard-page .template-btn-label strong {
+    max-width: none !important;
+  }
+
+  /* Full Stepper Workflow with progress bar visible when scrolling */
+  body.dashboard-page .stepper-nav {
+    display: flex !important;
+    min-width: 720px !important;
+    justify-content: space-between !important;
+    gap: 1.25rem !important;
+  }
+
+  body.dashboard-page .stepper-progress-bg {
+    display: block !important;
+  }
+
+  body.dashboard-page .step-label {
+    font-size: 0.85rem !important;
+    white-space: nowrap !important;
+  }
+
+  /* Candidate Tables: All columns readable when scrolling right */
+  body.dashboard-page .custom-table {
+    min-width: 880px !important;
+  }
+
+  /* Step 2 Toolbar & Inspector: Complete horizontal control bar */
+  body.dashboard-page .step2-top-bar {
+    min-width: 880px !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+
+  body.dashboard-page .step2-toolbar {
+    flex-direction: row !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 0.75rem !important;
+    width: auto !important;
+  }
+
+  body.dashboard-page .step2-toolbar .btn {
+    width: auto !important;
+  }
+
+  body.dashboard-page .inspector-nav-bar {
+    flex-direction: row !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 0.75rem !important;
+    min-width: 860px !important;
+  }
+
+  body.dashboard-page .cert-viewer-toolbar {
+    flex-direction: row !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 0.75rem !important;
+    min-width: 860px !important;
+  }
+
+  body.dashboard-page .cert-viewer-quick-actions {
+    width: auto !important;
+  }
+
+  body.dashboard-page .cert-viewer-quick-actions .btn {
+    flex: initial !important;
+  }
+
+  /* Step 3 Dispatch Controls */
+  body.dashboard-page .dispatch-controls {
+    flex-direction: row !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 0.75rem !important;
+  }
+
+  body.dashboard-page .dispatch-controls .btn {
+    width: auto !important;
+  }
+
+  /* Summary counts in Step 3 */
+  body.dashboard-page .summary-counts {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
